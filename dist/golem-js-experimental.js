@@ -1,7 +1,7 @@
 'use strict';
 
 var eventemitter3 = require('eventemitter3');
-var golemNetwork = require('./shared-BJbCK2GJ.js');
+var golemNetwork = require('./shared-BNcSY4Pv.js');
 var uuid = require('uuid');
 require('ya-ts-client');
 require('semver/functions/satisfies.js');
@@ -672,7 +672,7 @@ class Deployment {
         }
         // Allocation is re-used for all demands so the expiration date should
         // be the equal to the longest expiration date of all demands
-        const longestExpiration = Math.max(...this.components.resourceRentalPools.map((pool) => pool.options.market.rentHours)) * 3600;
+        const longestExpiration = Math.round(Math.max(...this.components.resourceRentalPools.map((pool) => pool.options.market.rentHours)) * 3600);
         const totalBudget = this.components.resourceRentalPools.reduce((acc, pool) => {
             var _a, _b;
             const replicas = pool.options.deployment.replicas;
@@ -711,7 +711,7 @@ class Deployment {
                     payment: (_f = pool.options) === null || _f === void 0 ? void 0 : _f.payment,
                 },
                 agreementOptions: {
-                    expirationSec: pool.options.market.rentHours * 3600,
+                    expirationSec: Math.round(pool.options.market.rentHours * 3600),
                 },
             });
             this.pools.set(pool.name, {

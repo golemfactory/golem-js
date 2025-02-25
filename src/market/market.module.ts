@@ -285,7 +285,7 @@ export class MarketModuleImpl implements MarketModule {
       ? await this.applyLocalGVMIServeSupport(demandOptions.workload)
       : demandOptions.workload;
 
-    const expirationSec = orderOptions.rentHours * 60 * 60;
+    const expirationSec = Math.round(orderOptions.rentHours * 60 * 60);
 
     /**
      * Default value on providers for MIN_AGREEMENT_EXPIRATION = 5min.

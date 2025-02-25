@@ -1,46 +1,25 @@
-'use strict';
-
-var debugLogger = require('debug');
-var YaTsClient = require('ya-ts-client');
-var uuid = require('uuid');
-var semverSatisfies = require('semver/functions/satisfies.js');
-var semverCoerce = require('semver/functions/coerce.js');
-var rxjs = require('rxjs');
-var EventSource = require('eventsource');
-var eventemitter3 = require('eventemitter3');
-var AsyncLock = require('async-lock');
-var Decimal = require('decimal.js-light');
-var path = require('path');
-var fs = require('fs');
-var spawn = require('cross-spawn');
-var flexbuffers_js = require('flatbuffers/js/flexbuffers.js');
-var jsSha3 = require('js-sha3');
-var NodeWebSocket = require('ws');
-var net = require('net');
-var buffer = require('buffer');
-var retry = require('async-retry');
-var ipNum = require('ip-num');
-
-function _interopNamespaceDefault(e) {
-    var n = Object.create(null);
-    if (e) {
-        Object.keys(e).forEach(function (k) {
-            if (k !== 'default') {
-                var d = Object.getOwnPropertyDescriptor(e, k);
-                Object.defineProperty(n, k, d.get ? d : {
-                    enumerable: true,
-                    get: function () { return e[k]; }
-                });
-            }
-        });
-    }
-    n.default = e;
-    return Object.freeze(n);
-}
-
-var YaTsClient__namespace = /*#__PURE__*/_interopNamespaceDefault(YaTsClient);
-var fs__namespace = /*#__PURE__*/_interopNamespaceDefault(fs);
-var jsSha3__namespace = /*#__PURE__*/_interopNamespaceDefault(jsSha3);
+import debugLogger from 'debug';
+import * as YaTsClient from 'ya-ts-client';
+import { v4 } from 'uuid';
+import semverSatisfies from 'semver/functions/satisfies.js';
+import semverCoerce from 'semver/functions/coerce.js';
+import { Subject, Observable, takeUntil, finalize, mergeWith, tap, filter, map, switchMap, lastValueFrom, toArray, catchError, takeWhile, from, mergeMap, of } from 'rxjs';
+import EventSource from 'eventsource';
+import { EventEmitter } from 'eventemitter3';
+import AsyncLock from 'async-lock';
+import Decimal from 'decimal.js-light';
+import path from 'path';
+import * as fs from 'fs';
+import fs__default from 'fs';
+import spawn from 'cross-spawn';
+import { toObject, encode } from 'flatbuffers/js/flexbuffers.js';
+import * as jsSha3 from 'js-sha3';
+import jsSha3__default from 'js-sha3';
+import NodeWebSocket, { WebSocket as WebSocket$1 } from 'ws';
+import net from 'net';
+import { Buffer as Buffer$1 } from 'buffer';
+import retry from 'async-retry';
+import { IPv4CidrRange, IPv4Mask, IPv4, IPv4Prefix } from 'ip-num';
 
 /**
  * @param time
@@ -346,11 +325,11 @@ const MIN_SUPPORTED_YAGNA = "0.15.2";
  */
 class YagnaApi {
     constructor(options) {
-        this.debitNoteEvents$ = new rxjs.Subject();
+        this.debitNoteEvents$ = new Subject();
         this.debitNoteEventsPoll = null;
-        this.invoiceEvents$ = new rxjs.Subject();
+        this.invoiceEvents$ = new Subject();
         this.invoiceEventPoll = null;
-        this.agreementEvents$ = new rxjs.Subject();
+        this.agreementEvents$ = new Subject();
         this.agreementEventsPoll = null;
         const apiKey = (options === null || options === void 0 ? void 0 : options.apiKey) || getYagnaAppKey();
         this.basePath = (options === null || options === void 0 ? void 0 : options.basePath) || getYagnaApiUrl();
@@ -364,17 +343,17 @@ class YagnaApi {
         const commonHeaders = {
             Authorization: `Bearer ${apiKey}`,
         };
-        const marketClient = new YaTsClient__namespace.MarketApi.Client({
+        const marketClient = new YaTsClient.MarketApi.Client({
             BASE: `${this.basePath}/market-api/v1`,
             HEADERS: commonHeaders,
         });
         this.market = marketClient.requestor;
-        const paymentClient = new YaTsClient__namespace.PaymentApi.Client({
+        const paymentClient = new YaTsClient.PaymentApi.Client({
             BASE: `${this.basePath}/payment-api/v1`,
             HEADERS: commonHeaders,
         });
         this.payment = paymentClient.requestor;
-        const activityApiClient = new YaTsClient__namespace.ActivityApi.Client({
+        const activityApiClient = new YaTsClient.ActivityApi.Client({
             BASE: `${this.basePath}/activity-api/v1`,
             HEADERS: commonHeaders,
         });
@@ -383,7 +362,7 @@ class YagnaApi {
             state: activityApiClient.requestorState,
             exec: {
                 observeBatchExecResults: (activityId, batchId) => {
-                    return new rxjs.Observable((observer) => {
+                    return new Observable((observer) => {
                         const eventSource = new EventSource(`${this.basePath}/activity-api/v1/activity/${activityId}/exec/${batchId}`, {
                             headers: {
                                 Accept: "text/event-stream",
@@ -397,28 +376,28 @@ class YagnaApi {
                 },
             },
         };
-        const netClient = new YaTsClient__namespace.NetApi.Client({
+        const netClient = new YaTsClient.NetApi.Client({
             BASE: `${this.basePath}/net-api/v1`,
             HEADERS: commonHeaders,
         });
         this.net = netClient.requestor;
-        const gsbClient = new YaTsClient__namespace.GsbApi.Client({
+        const gsbClient = new YaTsClient.GsbApi.Client({
             BASE: `${this.basePath}/gsb-api/v1`,
             HEADERS: commonHeaders,
         });
         this.gsb = gsbClient.requestor;
         this.logger = (options === null || options === void 0 ? void 0 : options.logger) ? options.logger.child("yagna") : defaultLogger("yagna");
-        const identityClient = new YaTsClient__namespace.IdentityApi.Client({
+        const identityClient = new YaTsClient.IdentityApi.Client({
             BASE: this.basePath,
             HEADERS: commonHeaders,
         });
         this.identity = identityClient.default;
-        const versionClient = new YaTsClient__namespace.VersionApi.Client({
+        const versionClient = new YaTsClient.VersionApi.Client({
             BASE: this.basePath,
         });
         this.version = versionClient.default;
         this.yagnaOptions = yagnaOptions;
-        this.appSessionId = uuid.v4();
+        this.appSessionId = v4();
         this.reader = new EventReader(this.logger);
     }
     /**
@@ -590,10 +569,10 @@ function runOnNextEventLoopIteration(cb) {
  * while `merge` would only complete when _all_ observables complete.
  */
 function mergeUntilFirstComplete(observable1, observable2) {
-    const completionSubject = new rxjs.Subject();
-    const observable1WithCompletion = observable1.pipe(rxjs.takeUntil(completionSubject), rxjs.finalize(() => completionSubject.next()));
-    const observable2WithCompletion = observable2.pipe(rxjs.takeUntil(completionSubject), rxjs.finalize(() => completionSubject.next()));
-    return observable1WithCompletion.pipe(rxjs.mergeWith(observable2WithCompletion));
+    const completionSubject = new Subject();
+    const observable1WithCompletion = observable1.pipe(takeUntil(completionSubject), finalize(() => completionSubject.next()));
+    const observable2WithCompletion = observable2.pipe(takeUntil(completionSubject), finalize(() => completionSubject.next()));
+    return observable1WithCompletion.pipe(mergeWith(observable2WithCompletion));
 }
 
 class DemandSpecification {
@@ -614,7 +593,7 @@ class Demand {
     }
 }
 
-exports.MarketErrorCode = void 0;
+var MarketErrorCode;
 (function (MarketErrorCode) {
     MarketErrorCode["CouldNotGetAgreement"] = "CouldNotGetAgreement";
     MarketErrorCode["CouldNotGetProposal"] = "CouldNotGetProposal";
@@ -631,7 +610,7 @@ exports.MarketErrorCode = void 0;
     MarketErrorCode["NoProposalAvailable"] = "NoProposalAvailable";
     MarketErrorCode["InternalError"] = "InternalError";
     MarketErrorCode["ScanFailed"] = "ScanFailed";
-})(exports.MarketErrorCode || (exports.MarketErrorCode = {}));
+})(MarketErrorCode || (MarketErrorCode = {}));
 class GolemMarketError extends GolemModuleError {
     constructor(message, code, previous) {
         super(message, code, previous);
@@ -767,16 +746,16 @@ class OfferProposal extends MarketProposal {
         const usageVector = this.properties["golem.com.usage.vector"];
         const priceVector = this.properties["golem.com.pricing.model.linear.coeffs"];
         if (!usageVector || usageVector.length === 0) {
-            throw new GolemMarketError("Broken proposal: the `golem.com.usage.vector` does not contain valid information about structure of the usage counters vector", exports.MarketErrorCode.InvalidProposal);
+            throw new GolemMarketError("Broken proposal: the `golem.com.usage.vector` does not contain valid information about structure of the usage counters vector", MarketErrorCode.InvalidProposal);
         }
         if (!priceVector || priceVector.length === 0) {
-            throw new GolemMarketError("Broken proposal: the `golem.com.pricing.model.linear.coeffs` does not contain pricing information", exports.MarketErrorCode.InvalidProposal);
+            throw new GolemMarketError("Broken proposal: the `golem.com.pricing.model.linear.coeffs` does not contain pricing information", MarketErrorCode.InvalidProposal);
         }
         if (usageVector.length < priceVector.length - 1) {
-            throw new GolemMarketError("Broken proposal: the `golem.com.usage.vector` has less pricing information than `golem.com.pricing.model.linear.coeffs`", exports.MarketErrorCode.InvalidProposal);
+            throw new GolemMarketError("Broken proposal: the `golem.com.usage.vector` has less pricing information than `golem.com.pricing.model.linear.coeffs`", MarketErrorCode.InvalidProposal);
         }
         if (priceVector.length < usageVector.length) {
-            throw new GolemMarketError("Broken proposal: the `golem.com.pricing.model.linear.coeffs` should contain 3 price values", exports.MarketErrorCode.InvalidProposal);
+            throw new GolemMarketError("Broken proposal: the `golem.com.pricing.model.linear.coeffs` should contain 3 price values", MarketErrorCode.InvalidProposal);
         }
     }
     getProviderPaymentPlatforms() {
@@ -869,7 +848,7 @@ class AcquireQueue {
 class DraftOfferProposalPool {
     constructor(options) {
         this.options = options;
-        this.events = new eventemitter3.EventEmitter();
+        this.events = new EventEmitter();
         this.acquireQueue = new AcquireQueue();
         /** {@link ProposalPoolOptions.minCount} */
         this.minCount = 0;
@@ -902,7 +881,7 @@ class DraftOfferProposalPool {
     add(proposal) {
         if (!proposal.isDraft()) {
             this.logger.error("Cannot add a non-draft proposal to the pool", { proposalId: proposal.id });
-            throw new GolemMarketError("Cannot add a non-draft proposal to the pool", exports.MarketErrorCode.InvalidProposal);
+            throw new GolemMarketError("Cannot add a non-draft proposal to the pool", MarketErrorCode.InvalidProposal);
         }
         // if someone is waiting for a proposal, give it to them
         if (this.acquireQueue.hasAcquirers()) {
@@ -1602,7 +1581,7 @@ class ScannedOffer {
 class MarketModuleImpl {
     constructor(deps, options) {
         this.deps = deps;
-        this.events = new eventemitter3.EventEmitter();
+        this.events = new EventEmitter();
         this.logger = defaultLogger("market");
         this.logger = deps.logger;
         this.marketApi = deps.marketApi;
@@ -1624,7 +1603,7 @@ class MarketModuleImpl {
         const workloadOptions = demandOptions.workload
             ? await this.applyLocalGVMIServeSupport(demandOptions.workload)
             : demandOptions.workload;
-        const expirationSec = orderOptions.rentHours * 60 * 60;
+        const expirationSec = Math.round(orderOptions.rentHours * 60 * 60);
         /**
          * Default value on providers for MIN_AGREEMENT_EXPIRATION = 5min.
          * This means that if the user declares a rentHours time of less than 5 min,
@@ -1678,7 +1657,7 @@ class MarketModuleImpl {
      * Publishes the specified demand and re-publishes it based on demandSpecification.expirationSec interval
      */
     publishAndRefreshDemand(demandSpecification) {
-        return new rxjs.Observable((subscriber) => {
+        return new Observable((subscriber) => {
             let currentDemand;
             const subscribeToOfferProposals = async () => {
                 try {
@@ -1691,7 +1670,7 @@ class MarketModuleImpl {
                     return currentDemand;
                 }
                 catch (err) {
-                    const golemMarketError = new GolemMarketError(`Could not publish demand on the market`, exports.MarketErrorCode.SubscriptionFailed, err);
+                    const golemMarketError = new GolemMarketError(`Could not publish demand on the market`, MarketErrorCode.SubscriptionFailed, err);
                     subscriber.error(golemMarketError);
                 }
             };
@@ -1705,7 +1684,7 @@ class MarketModuleImpl {
                     });
                 }
                 catch (err) {
-                    const golemMarketError = new GolemMarketError(`Could not publish demand on the market`, exports.MarketErrorCode.SubscriptionFailed, err);
+                    const golemMarketError = new GolemMarketError(`Could not publish demand on the market`, MarketErrorCode.SubscriptionFailed, err);
                     subscriber.error(golemMarketError);
                 }
             };
@@ -1734,10 +1713,10 @@ class MarketModuleImpl {
         });
     }
     collectMarketProposalEvents(demand) {
-        return this.deps.marketApi.collectMarketProposalEvents(demand).pipe(rxjs.tap((event) => this.logger.debug("Received demand offer event from yagna", { event })), rxjs.tap((event) => this.emitMarketProposalEvents(event)));
+        return this.deps.marketApi.collectMarketProposalEvents(demand).pipe(tap((event) => this.logger.debug("Received demand offer event from yagna", { event })), tap((event) => this.emitMarketProposalEvents(event)));
     }
     collectAllOfferProposals(demand) {
-        return this.collectMarketProposalEvents(demand).pipe(rxjs.filter((event) => event.type === "ProposalReceived"), rxjs.map((event) => event.proposal));
+        return this.collectMarketProposalEvents(demand).pipe(filter((event) => event.type === "ProposalReceived"), map((event) => event.proposal));
     }
     async negotiateProposal(offerProposal, counterDemand) {
         try {
@@ -1777,30 +1756,30 @@ class MarketModuleImpl {
     collectDraftOfferProposals(options) {
         return this.publishAndRefreshDemand(options.demandSpecification).pipe(
         // For each fresh demand, start to watch the related market conversation events
-        rxjs.switchMap((freshDemand) => this.collectMarketProposalEvents(freshDemand)), 
+        switchMap((freshDemand) => this.collectMarketProposalEvents(freshDemand)), 
         // Select only events for proposal received
-        rxjs.filter((event) => event.type === "ProposalReceived"), 
+        filter((event) => event.type === "ProposalReceived"), 
         // Convert event to proposal
-        rxjs.map((event) => event.proposal), 
+        map((event) => event.proposal), 
         // We are interested only in Initial and Draft proposals, that are valid
-        rxjs.filter((proposal) => (proposal.isInitial() || proposal.isDraft()) && proposal.isValid()), 
+        filter((proposal) => (proposal.isInitial() || proposal.isDraft()) && proposal.isValid()), 
         // If they are accepted by the pricing criteria
-        rxjs.filter((proposal) => this.filterProposalsByPricingOptions(options.pricing, proposal)), 
+        filter((proposal) => this.filterProposalsByPricingOptions(options.pricing, proposal)), 
         // If they are accepted by the user filter
-        rxjs.filter((proposal) => ((options === null || options === void 0 ? void 0 : options.filter) ? this.filterProposalsByUserFilter(options.filter, proposal) : true)), 
+        filter((proposal) => ((options === null || options === void 0 ? void 0 : options.filter) ? this.filterProposalsByUserFilter(options.filter, proposal) : true)), 
         // Batch initial proposals and  deduplicate them by provider key, pass-though proposals in other states
         this.reduceInitialProposalsByProviderKey({
             minProposalsBatchSize: options === null || options === void 0 ? void 0 : options.minProposalsBatchSize,
             proposalsBatchReleaseTimeoutMs: options === null || options === void 0 ? void 0 : options.proposalsBatchReleaseTimeoutMs,
         }), 
         // Tap-in negotiator logic and negotiate initial proposals
-        rxjs.tap((proposal) => {
+        tap((proposal) => {
             if (proposal.isInitial()) {
                 this.negotiateProposal(proposal, options.demandSpecification).catch((err) => this.logger.error("Failed to negotiate the proposal", err));
             }
         }), 
         // Continue only with drafts
-        rxjs.filter((proposal) => proposal.isDraft()));
+        filter((proposal) => proposal.isDraft()));
     }
     emitMarketProposalEvents(event) {
         const { type } = event;
@@ -1874,7 +1853,7 @@ class MarketModuleImpl {
      * Reduce initial proposals to a set grouped by the provider's key to avoid duplicate offers
      */
     reduceInitialProposalsByProviderKey(options) {
-        return (input) => new rxjs.Observable((observer) => {
+        return (input) => new Observable((observer) => {
             let isCancelled = false;
             const proposalsBatch = new ProposalsBatch({
                 minBatchSize: options === null || options === void 0 ? void 0 : options.minProposalsBatchSize,
@@ -2148,7 +2127,7 @@ class Allocation {
     }
 }
 
-exports.RejectionReason = void 0;
+var RejectionReason;
 (function (RejectionReason) {
     RejectionReason["UnsolicitedService"] = "UNSOLICITED_SERVICE";
     RejectionReason["BadService"] = "BAD_SERVICE";
@@ -2160,7 +2139,7 @@ exports.RejectionReason = void 0;
      * By final state we mean: we got an invoice for that agreement
      */
     RejectionReason["AgreementFinalized"] = "AGREEMENT_FINALIZED";
-})(exports.RejectionReason || (exports.RejectionReason = {}));
+})(RejectionReason || (RejectionReason = {}));
 
 /******************************************************************************
 Copyright (c) Microsoft Corporation.
@@ -2198,7 +2177,7 @@ typeof SuppressedError === "function" ? SuppressedError : function (error, suppr
 };
 
 var _GolemPaymentError_allocation, _GolemPaymentError_provider;
-exports.PaymentErrorCode = void 0;
+var PaymentErrorCode;
 (function (PaymentErrorCode) {
     PaymentErrorCode["AllocationCreationFailed"] = "AllocationCreationFailed";
     PaymentErrorCode["MissingAllocation"] = "MissingAllocation";
@@ -2213,7 +2192,7 @@ exports.PaymentErrorCode = void 0;
     PaymentErrorCode["PaymentStatusQueryFailed"] = "PaymentStatusQueryFailed";
     PaymentErrorCode["AgreementAlreadyPaid"] = "AgreementAlreadyPaid";
     PaymentErrorCode["InvoiceAlreadyReceived"] = "InvoiceAlreadyReceived";
-})(exports.PaymentErrorCode || (exports.PaymentErrorCode = {}));
+})(PaymentErrorCode || (PaymentErrorCode = {}));
 class GolemPaymentError extends GolemModuleError {
     constructor(message, code, allocation, provider, previous) {
         super(message, code, previous);
@@ -2506,11 +2485,11 @@ class AgreementPaymentProcess {
         };
         const invoiceSubscription = this.paymentModule
             .observeInvoices()
-            .pipe(rxjs.filter((invoice) => invoice.agreementId === this.agreement.id))
+            .pipe(filter((invoice) => invoice.agreementId === this.agreement.id))
             .subscribe((invoice) => this.addInvoice(invoice));
         const debitNoteSubscription = this.paymentModule
             .observeDebitNotes()
-            .pipe(rxjs.filter((debitNote) => debitNote.agreementId === this.agreement.id))
+            .pipe(filter((debitNote) => debitNote.agreementId === this.agreement.id))
             .subscribe((debitNote) => this.addDebitNote(debitNote));
         this.cleanupSubscriptions = () => {
             invoiceSubscription.unsubscribe();
@@ -2538,7 +2517,7 @@ class AgreementPaymentProcess {
     async applyDebitNote(debitNote) {
         const isAlreadyFinalized = this.hasReceivedInvoice();
         if (isAlreadyFinalized) {
-            await this.rejectDebitNote(debitNote, exports.RejectionReason.AgreementFinalized, `DebitNote ${debitNote.id} rejected because the agreement ${debitNote.agreementId} is already covered ` +
+            await this.rejectDebitNote(debitNote, RejectionReason.AgreementFinalized, `DebitNote ${debitNote.id} rejected because the agreement ${debitNote.agreementId} is already covered ` +
                 `with a final invoice that should be paid instead of the debit note`);
             return false;
         }
@@ -2565,7 +2544,7 @@ class AgreementPaymentProcess {
             throw new GolemUserError("An error occurred in the debit note filter", error);
         }
         if (!acceptedByFilter) {
-            await this.rejectDebitNote(debitNote, exports.RejectionReason.RejectedByRequestorFilter, `DebitNote ${debitNote.id} for agreement ${debitNote.agreementId} rejected by DebitNote Filter`);
+            await this.rejectDebitNote(debitNote, RejectionReason.RejectedByRequestorFilter, `DebitNote ${debitNote.id} for agreement ${debitNote.agreementId} rejected by DebitNote Filter`);
             return false;
         }
         try {
@@ -2578,7 +2557,7 @@ class AgreementPaymentProcess {
         }
         catch (error) {
             const message = getMessageFromApiError(error);
-            throw new GolemPaymentError(`Unable to accept debit note ${debitNote.id}. ${message}`, exports.PaymentErrorCode.DebitNoteAcceptanceFailed, undefined, debitNote.provider, error);
+            throw new GolemPaymentError(`Unable to accept debit note ${debitNote.id}. ${message}`, PaymentErrorCode.DebitNoteAcceptanceFailed, undefined, debitNote.provider, error);
         }
     }
     async hasProcessedDebitNote(debitNote) {
@@ -2591,7 +2570,7 @@ class AgreementPaymentProcess {
         }
         catch (error) {
             const message = getMessageFromApiError(error);
-            throw new GolemPaymentError(`Unable to reject debit note ${debitNote.id}. ${message}`, exports.PaymentErrorCode.DebitNoteRejectionFailed, undefined, debitNote.provider, error);
+            throw new GolemPaymentError(`Unable to reject debit note ${debitNote.id}. ${message}`, PaymentErrorCode.DebitNoteRejectionFailed, undefined, debitNote.provider, error);
         }
     }
     finalize(invoice) {
@@ -2606,11 +2585,11 @@ class AgreementPaymentProcess {
         });
         if (this.invoice) {
             // Protects from possible fraud: someone sends a second, different invoice for the same agreement
-            throw new GolemPaymentError(`Agreement ${this.agreement.id} is already covered with an invoice: ${this.invoice.id}`, exports.PaymentErrorCode.AgreementAlreadyPaid, this.allocation, this.invoice.provider);
+            throw new GolemPaymentError(`Agreement ${this.agreement.id} is already covered with an invoice: ${this.invoice.id}`, PaymentErrorCode.AgreementAlreadyPaid, this.allocation, this.invoice.provider);
         }
         if (invoice.getStatus() !== "RECEIVED") {
             throw new GolemPaymentError(`The invoice ${invoice.id} for agreement ${invoice.agreementId} has status ${invoice.getStatus()}, ` +
-                `but we can accept only the ones with status RECEIVED`, exports.PaymentErrorCode.InvoiceAlreadyReceived, this.allocation, invoice.provider);
+                `but we can accept only the ones with status RECEIVED`, PaymentErrorCode.InvoiceAlreadyReceived, this.allocation, invoice.provider);
         }
         this.finalize(invoice);
         let acceptedByFilter = false;
@@ -2625,7 +2604,7 @@ class AgreementPaymentProcess {
             throw new GolemUserError("An error occurred in the invoice filter", error);
         }
         if (!acceptedByFilter) {
-            const rejectionReason = exports.RejectionReason.RejectedByRequestorFilter;
+            const rejectionReason = RejectionReason.RejectedByRequestorFilter;
             const message = `Invoice ${invoice.id} for agreement ${invoice.agreementId} rejected by Invoice Filter`;
             await this.rejectInvoice(invoice, rejectionReason, message);
             return false;
@@ -2635,7 +2614,7 @@ class AgreementPaymentProcess {
         }
         catch (error) {
             const message = getMessageFromApiError(error);
-            throw new GolemPaymentError(`Unable to accept invoice ${invoice.id} ${message}`, exports.PaymentErrorCode.InvoiceAcceptanceFailed, undefined, invoice.provider, error);
+            throw new GolemPaymentError(`Unable to accept invoice ${invoice.id} ${message}`, PaymentErrorCode.InvoiceAcceptanceFailed, undefined, invoice.provider, error);
         }
         return true;
     }
@@ -2646,7 +2625,7 @@ class AgreementPaymentProcess {
         }
         catch (error) {
             const message = getMessageFromApiError(error);
-            throw new GolemPaymentError(`Unable to reject invoice ${invoice.id} ${message}`, exports.PaymentErrorCode.InvoiceRejectionFailed, undefined, invoice.provider, error);
+            throw new GolemPaymentError(`Unable to reject invoice ${invoice.id} ${message}`, PaymentErrorCode.InvoiceRejectionFailed, undefined, invoice.provider, error);
         }
     }
     hasReceivedInvoice() {
@@ -2664,7 +2643,7 @@ const MAINNETS = Object.freeze(["mainnet", "polygon"]);
 class PaymentModuleImpl {
     constructor(deps, options) {
         var _a, _b, _c;
-        this.events = new eventemitter3.EventEmitter();
+        this.events = new EventEmitter();
         this.logger = defaultLogger("payment");
         this.options = {
             driver: "erc20",
@@ -2865,7 +2844,7 @@ class PaymentModuleImpl {
     }
 }
 
-exports.ActivityStateEnum = void 0;
+var ActivityStateEnum;
 (function (ActivityStateEnum) {
     ActivityStateEnum["New"] = "New";
     ActivityStateEnum["Initialized"] = "Initialized";
@@ -2875,7 +2854,7 @@ exports.ActivityStateEnum = void 0;
     ActivityStateEnum["Terminated"] = "Terminated";
     /** In case when we couldn't establish the in on yagna */
     ActivityStateEnum["Unknown"] = "Unknown";
-})(exports.ActivityStateEnum || (exports.ActivityStateEnum = {}));
+})(ActivityStateEnum || (ActivityStateEnum = {}));
 /**
  * Activity module - an object representing the runtime environment on the provider in accordance with the `Package` specification.
  * As part of a given activity, it is possible to execute exe script commands and capture their results.
@@ -2888,7 +2867,7 @@ class Activity {
      * @param previousState The previous state (or New if this is the first time we're creating the activity)
      * @param usage Current resource usage vector information
      */
-    constructor(id, agreement, currentState = exports.ActivityStateEnum.New, previousState = exports.ActivityStateEnum.Unknown, usage) {
+    constructor(id, agreement, currentState = ActivityStateEnum.New, previousState = ActivityStateEnum.Unknown, usage) {
         this.id = id;
         this.agreement = agreement;
         this.currentState = currentState;
@@ -3204,8 +3183,8 @@ class GftpStorageProvider {
         const { randomUUID } = await import('crypto');
         const tmp = await import('tmp');
         const fileName = path.join(tmp.dirSync().name, randomUUID().toString());
-        if (fs.existsSync(fileName))
-            fs.unlinkSync(fileName);
+        if (fs__default.existsSync(fileName))
+            fs__default.unlinkSync(fileName);
         return fileName;
     }
     async receiveFile(path) {
@@ -3255,7 +3234,7 @@ class GftpStorageProvider {
             if (!this.isInitialized) {
                 throw new GolemInternalError(`GFTP was not initialized when calling JSON-RPC ${method} with ${JSON.stringify(params)}`);
             }
-            const callId = uuid.v4();
+            const callId = v4();
             const request = {
                 jsonrpc: "2.0",
                 id: callId,
@@ -3280,7 +3259,7 @@ class GftpStorageProvider {
         var _a;
         // FIXME: temp file is never deleted.
         const fileName = await this.generateTempFileName();
-        const wStream = fs.createWriteStream(fileName, {
+        const wStream = fs__default.createWriteStream(fileName, {
             encoding: "binary",
         });
         // eslint-disable-next-line no-async-promise-executor
@@ -3353,7 +3332,7 @@ class NullStorageProvider {
     }
 }
 
-const fsPromises = fs__namespace.promises;
+const fsPromises = fs.promises;
 /**
  * Storage provider that uses GFTP over WebSockets.
  */
@@ -3386,7 +3365,7 @@ class WebSocketStorageProvider {
                 this.logger.error("Received non-ArrayBuffer data from the socket", { data: event.data });
                 return;
             }
-            const req = flexbuffers_js.toObject(event.data);
+            const req = toObject(event.data);
             this.logger.debug("Received GFTP request for publishData", req);
             if (req.component === "GetMetadata") {
                 this.respond(ws, req.id, { fileSize: data.byteLength });
@@ -3419,7 +3398,7 @@ class WebSocketStorageProvider {
                 this.logger.error("Received non-ArrayBuffer data from the socket", { data: event.data });
                 return;
             }
-            const req = flexbuffers_js.toObject(event.data);
+            const req = toObject(event.data);
             this.logger.debug("Received GFTP request for publishFile", req);
             if (req.component === "GetMetadata") {
                 this.respond(ws, req.id, { fileSize });
@@ -3454,7 +3433,7 @@ class WebSocketStorageProvider {
                 this.logger.error("Received non-ArrayBuffer data from the socket", { data: event.data });
                 return;
             }
-            const req = flexbuffers_js.toObject(event.data);
+            const req = toObject(event.data);
             this.logger.debug("Received GFTP request for receiveData", req);
             if (req.component === "UploadChunk") {
                 data.push(req.payload.chunk);
@@ -3485,7 +3464,7 @@ class WebSocketStorageProvider {
                 this.logger.error("Received non-ArrayBuffer data from the socket", { data: event.data });
                 return;
             }
-            const req = flexbuffers_js.toObject(event.data);
+            const req = toObject(event.data);
             this.logger.debug("Received GFTP request for receiveFile", req);
             if (req.component === "UploadChunk") {
                 await fileHandle.write(req.payload.chunk.content);
@@ -3515,7 +3494,7 @@ class WebSocketStorageProvider {
         return this.ready;
     }
     async createFileInfo() {
-        const id = uuid.v4();
+        const id = v4();
         const data = await this.yagnaApi.identity.getIdentity();
         const me = data.identity;
         return {
@@ -3557,7 +3536,7 @@ class WebSocketStorageProvider {
         await this.yagnaApi.gsb.unbindServices(id);
     }
     respond(ws, id, payload) {
-        ws.send(flexbuffers_js.encode({
+        ws.send(encode({
             id,
             payload,
         }));
@@ -3570,7 +3549,7 @@ class WebSocketStorageProvider {
             buf.set(chunk.content, chunk.offset);
         });
         // FIXME: Use digest.update and async, as it can only handle 14MB/s on my machine, which is way to slow to do synchronously.
-        const hashHex = jsSha3__namespace.sha3_256(buf);
+        const hashHex = jsSha3.sha3_256(buf);
         if (hash !== hashHex) {
             throw new GolemInternalError(`File corrupted, expected hash ${hash}, got ${hashHex}`);
         }
@@ -3581,7 +3560,7 @@ class WebSocketStorageProvider {
 }
 
 var _GolemWorkError_agreement, _GolemWorkError_activity, _GolemWorkError_provider;
-exports.WorkErrorCode = void 0;
+var WorkErrorCode;
 (function (WorkErrorCode) {
     WorkErrorCode["ServiceNotInitialized"] = "ServiceNotInitialized";
     WorkErrorCode["ScriptExecutionFailed"] = "ScriptExecutionFailed";
@@ -3593,7 +3572,7 @@ exports.WorkErrorCode = void 0;
     WorkErrorCode["ActivityDeploymentFailed"] = "ActivityDeploymentFailed";
     WorkErrorCode["ActivityStatusQueryFailed"] = "ActivityStatusQueryFailed";
     WorkErrorCode["ActivityResetFailed"] = "ActivityResetFailed";
-})(exports.WorkErrorCode || (exports.WorkErrorCode = {}));
+})(WorkErrorCode || (WorkErrorCode = {}));
 class GolemWorkError extends GolemModuleError {
     constructor(message, code, agreement, activity, provider, previous) {
         super(message, code, previous);
@@ -3683,7 +3662,7 @@ class Batch {
                     error: (error) => {
                         const golemError = error instanceof GolemWorkError
                             ? error
-                            : new GolemWorkError(`Unable to execute script ${error}`, exports.WorkErrorCode.ScriptExecutionFailed, this.executor.activity.agreement, this.executor.activity, this.executor.activity.agreement.provider, error);
+                            : new GolemWorkError(`Unable to execute script ${error}`, WorkErrorCode.ScriptExecutionFailed, this.executor.activity.agreement, this.executor.activity, this.executor.activity.agreement.provider, error);
                         this.logger.debug("Error in batch script execution", { error });
                         this.script
                             .after(allResults)
@@ -3701,7 +3680,7 @@ class Batch {
             if (error instanceof GolemWorkError) {
                 throw error;
             }
-            throw new GolemWorkError(`Unable to execute script ${error}`, exports.WorkErrorCode.ScriptExecutionFailed, this.executor.activity.agreement, this.executor.activity, this.executor.activity.agreement.provider, error);
+            throw new GolemWorkError(`Unable to execute script ${error}`, WorkErrorCode.ScriptExecutionFailed, this.executor.activity.agreement, this.executor.activity, this.executor.activity.agreement.provider, error);
         }
     }
     async endStream() {
@@ -3717,19 +3696,19 @@ class Batch {
             if (error instanceof GolemWorkError) {
                 throw error;
             }
-            throw new GolemWorkError(`Unable to execute script ${error}`, exports.WorkErrorCode.ScriptExecutionFailed, this.executor.activity.agreement, this.executor.activity, this.executor.activity.agreement.provider, error);
+            throw new GolemWorkError(`Unable to execute script ${error}`, WorkErrorCode.ScriptExecutionFailed, this.executor.activity.agreement, this.executor.activity, this.executor.activity.agreement.provider, error);
         }
         const decodedResults = [];
         const { activity } = this.executor;
         const result$ = this.executor.getResultsObservable(executionMetadata);
-        return result$.pipe(rxjs.map((chunk) => {
+        return result$.pipe(map((chunk) => {
             if (chunk.result !== "Error") {
                 return chunk;
             }
-            throw new GolemWorkError(`${chunk === null || chunk === void 0 ? void 0 : chunk.message}. Stdout: ${String(chunk === null || chunk === void 0 ? void 0 : chunk.stdout).trim()}. Stderr: ${String(chunk === null || chunk === void 0 ? void 0 : chunk.stderr).trim()}`, exports.WorkErrorCode.ScriptExecutionFailed, activity.agreement, activity, activity.provider);
-        }), rxjs.tap((chunk) => {
+            throw new GolemWorkError(`${chunk === null || chunk === void 0 ? void 0 : chunk.message}. Stdout: ${String(chunk === null || chunk === void 0 ? void 0 : chunk.stdout).trim()}. Stderr: ${String(chunk === null || chunk === void 0 ? void 0 : chunk.stderr).trim()}`, WorkErrorCode.ScriptExecutionFailed, activity.agreement, activity, activity.provider);
+        }), tap((chunk) => {
             decodedResults.push(chunk);
-        }), rxjs.finalize(() => script.after(decodedResults).catch((error) => this.logger.error("Failed to cleanup script", { error }))));
+        }), finalize(() => script.after(decodedResults).catch((error) => this.logger.error("Failed to cleanup script", { error }))));
     }
 }
 
@@ -3747,13 +3726,13 @@ class RemoteProcess {
         /**
          * Stream connected to stdout from provider process
          */
-        this.stdout = new rxjs.Subject();
+        this.stdout = new Subject();
         /**
          * Stream connected to stderr from provider process
          */
-        this.stderr = new rxjs.Subject();
+        this.stderr = new Subject();
         this.subscription = activityResult$
-            .pipe(rxjs.finalize(() => {
+            .pipe(finalize(() => {
             this.stdout.complete();
             this.stderr.complete();
         }))
@@ -3779,7 +3758,7 @@ class RemoteProcess {
         return new Promise((resolve, reject) => {
             const timeoutInMs = timeout !== null && timeout !== void 0 ? timeout : DEFAULTS.exitWaitingTimeout;
             const timeoutId = setTimeout(() => {
-                reject(new GolemWorkError(`Unable to get activity results. The waiting time (${timeoutInMs} ms) for the final result has been exceeded`, exports.WorkErrorCode.ActivityResultsFetchingFailed, this.activity.agreement, this.activity, this.activity.provider, new GolemTimeoutError(`The waiting time (${timeoutInMs} ms) for the final result has been exceeded`)));
+                reject(new GolemWorkError(`Unable to get activity results. The waiting time (${timeoutInMs} ms) for the final result has been exceeded`, WorkErrorCode.ActivityResultsFetchingFailed, this.activity.agreement, this.activity, this.activity.provider, new GolemTimeoutError(`The waiting time (${timeoutInMs} ms) for the final result has been exceeded`)));
                 this.activityModule
                     .destroyActivity(this.activity)
                     .catch((err) => this.logger.error(`Error when destroying activity`, err));
@@ -3790,7 +3769,7 @@ class RemoteProcess {
                     resolve(this.lastResult);
                 }
                 else {
-                    reject(new GolemWorkError(`An error occurred while retrieving the results. ${this.streamError}`, exports.WorkErrorCode.ActivityResultsFetchingFailed, this.activity.agreement, this.activity, this.activity.provider));
+                    reject(new GolemWorkError(`An error occurred while retrieving the results. ${this.streamError}`, WorkErrorCode.ActivityResultsFetchingFailed, this.activity.agreement, this.activity, this.activity.provider));
                     this.activityModule
                         .destroyActivity(this.activity)
                         .catch((err) => this.logger.error(`Error when destroying activity`, err));
@@ -3841,7 +3820,7 @@ class TcpProxy {
         var _a;
         this.wsUrl = wsUrl;
         this.appKey = appKey;
-        this.events = new eventemitter3.EventEmitter();
+        this.events = new EventEmitter();
         checkAndThrowUnsupportedInBrowserError("TCP Proxy");
         this.heartBeatSec = (_a = options.heartBeatSec) !== null && _a !== void 0 ? _a : 10;
         this.logger = options.logger ? options.logger.child("tcp-proxy") : defaultLogger("tcp-proxy");
@@ -3863,14 +3842,14 @@ class TcpProxy {
             const flushSocketBuffer = () => {
                 this.logger.debug("Flushing Socket buffer");
                 if (state.sBuffer.length > 0) {
-                    client.write(buffer.Buffer.concat(state.sBuffer));
+                    client.write(Buffer$1.concat(state.sBuffer));
                 }
                 clearSocketBuffer();
             };
             const flushWebSocketBuffer = () => {
                 this.logger.debug("Flushing WebSocket buffer");
                 if (state.wsBuffer.length > 0) {
-                    ws.send(buffer.Buffer.concat(state.wsBuffer), {
+                    ws.send(Buffer$1.concat(state.wsBuffer), {
                         binary: true,
                         mask: true,
                     });
@@ -3883,7 +3862,7 @@ class TcpProxy {
                 clearWebSocketBuffer();
                 clearSocketBuffer();
             };
-            const ws = new NodeWebSocket.WebSocket(this.wsUrl, { headers: { authorization: `Bearer ${this.appKey}` } });
+            const ws = new WebSocket$1(this.wsUrl, { headers: { authorization: `Bearer ${this.appKey}` } });
             // OPEN HANDLERS
             ws.on("open", () => {
                 this.logger.debug("Yagna WS opened");
@@ -3949,7 +3928,7 @@ class TcpProxy {
             ws.on("message", (message) => {
                 const length = "length" in message ? message.length : null;
                 this.logger.debug("Yagna WS received data", { length, socketReady: state.sReady });
-                if (message instanceof buffer.Buffer) {
+                if (message instanceof Buffer$1) {
                     if (!state.sReady) {
                         state.wsBuffer.push(message);
                     }
@@ -4085,7 +4064,7 @@ class ExeUnit {
             .then((activity) => activity.getState())
             .catch((err) => {
             this.logger.error("Failed to read activity state", err);
-            throw new GolemWorkError("Failed to read activity state", exports.WorkErrorCode.ActivityStatusQueryFailed, this.activity.agreement, this.activity, err);
+            throw new GolemWorkError("Failed to read activity state", WorkErrorCode.ActivityStatusQueryFailed, this.activity.agreement, this.activity, err);
         });
     }
     /**
@@ -4096,17 +4075,17 @@ class ExeUnit {
     async setup() {
         try {
             let state = await this.fetchState();
-            if (state === exports.ActivityStateEnum.Ready) {
+            if (state === ActivityStateEnum.Ready) {
                 await this.setupActivity();
                 return;
             }
-            if (state === exports.ActivityStateEnum.Initialized) {
+            if (state === ActivityStateEnum.Initialized) {
                 await this.deployActivity();
             }
             await sleep(1000, true);
             state = await this.fetchState();
-            if (state !== exports.ActivityStateEnum.Ready) {
-                throw new GolemWorkError(`Activity ${this.activity.id} cannot reach the Ready state. Current state: ${state}`, exports.WorkErrorCode.ActivityDeploymentFailed, this.activity.agreement, this.activity, this.activity.provider);
+            if (state !== ActivityStateEnum.Ready) {
+                throw new GolemWorkError(`Activity ${this.activity.id} cannot reach the Ready state. Current state: ${state}`, WorkErrorCode.ActivityDeploymentFailed, this.activity.agreement, this.activity, this.activity.provider);
             }
             await this.setupActivity();
         }
@@ -4141,14 +4120,14 @@ class ExeUnit {
             ]).getExeScriptRequest());
             const result$ = this.executor.getResultsObservable(executionMetadata);
             // if any result is an error, throw an error
-            await rxjs.lastValueFrom(result$.pipe(rxjs.tap((result) => {
+            await lastValueFrom(result$.pipe(tap((result) => {
                 if (result.result === "Error") {
                     throw new Error(String(result.message));
                 }
             })));
         }
         catch (error) {
-            throw new GolemWorkError(`Unable to deploy activity. ${error}`, exports.WorkErrorCode.ActivityDeploymentFailed, this.activity.agreement, this.activity, this.activity.provider, error);
+            throw new GolemWorkError(`Unable to deploy activity. ${error}`, WorkErrorCode.ActivityDeploymentFailed, this.activity.agreement, this.activity, this.activity.provider, error);
         }
     }
     async setupActivity() {
@@ -4242,12 +4221,12 @@ class ExeUnit {
      */
     getWebsocketUri(port) {
         if (!this.networkNode)
-            throw new GolemWorkError("There is no network in this exe-unit", exports.WorkErrorCode.NetworkSetupMissing, this.activity.agreement, this.activity, this.activity.provider);
+            throw new GolemWorkError("There is no network in this exe-unit", WorkErrorCode.NetworkSetupMissing, this.activity.agreement, this.activity, this.activity.provider);
         return this.networkNode.getWebsocketUri(port);
     }
     getIp() {
         if (!this.networkNode)
-            throw new GolemWorkError("There is no network in this exe-unit", exports.WorkErrorCode.NetworkSetupMissing, this.activity.agreement, this.activity, this.activity.provider);
+            throw new GolemWorkError("There is no network in this exe-unit", WorkErrorCode.NetworkSetupMissing, this.activity.agreement, this.activity, this.activity.provider);
         return this.networkNode.ip;
     }
     /**
@@ -4276,14 +4255,14 @@ class ExeUnit {
         const script = new Script([command]);
         await script.before().catch((e) => {
             var _a, _b;
-            throw new GolemWorkError(`Script initialization failed for command: ${JSON.stringify(command.toJson())}. ${((_b = (_a = e === null || e === void 0 ? void 0 : e.response) === null || _a === void 0 ? void 0 : _a.data) === null || _b === void 0 ? void 0 : _b.message) || (e === null || e === void 0 ? void 0 : e.message) || e}`, exports.WorkErrorCode.ScriptInitializationFailed, this.activity.agreement, this.activity, this.activity.provider, e);
+            throw new GolemWorkError(`Script initialization failed for command: ${JSON.stringify(command.toJson())}. ${((_b = (_a = e === null || e === void 0 ? void 0 : e.response) === null || _a === void 0 ? void 0 : _a.data) === null || _b === void 0 ? void 0 : _b.message) || (e === null || e === void 0 ? void 0 : e.message) || e}`, WorkErrorCode.ScriptInitializationFailed, this.activity.agreement, this.activity, this.activity.provider, e);
         });
         await sleep(100, true);
         // Send script.
         const executionMetadata = await this.executor.execute(script.getExeScriptRequest());
         const result$ = this.executor.getResultsObservable(executionMetadata, false, options === null || options === void 0 ? void 0 : options.signalOrTimeout, options === null || options === void 0 ? void 0 : options.maxRetries);
         // Process result.
-        let allResults = await rxjs.lastValueFrom(result$.pipe(rxjs.toArray()));
+        let allResults = await lastValueFrom(result$.pipe(toArray()));
         allResults = await script.after(allResults);
         // Handle errors.
         const commandsErrors = allResults.filter((res) => res.result === "Error");
@@ -4354,7 +4333,7 @@ class ExeScriptExecutor {
             if (this.abortSignal.aborted) {
                 throw new GolemAbortError("Executions of script has been aborted", this.abortSignal.reason);
             }
-            throw new GolemWorkError(`Unable to execute script. ${message}`, exports.WorkErrorCode.ScriptExecutionFailed, this.activity.agreement, this.activity, this.activity.provider, error);
+            throw new GolemWorkError(`Unable to execute script. ${message}`, WorkErrorCode.ScriptExecutionFailed, this.activity.agreement, this.activity, this.activity.provider, error);
         }
     }
     /**
@@ -4371,7 +4350,7 @@ class ExeScriptExecutor {
     getResultsObservable(batch, stream, signalOrTimeout, maxRetries) {
         const { signal, cleanup } = anyAbortSignal(this.abortSignal, createAbortSignalFromTimeout(signalOrTimeout));
         // observable that emits when the script execution should be aborted
-        const abort$ = new rxjs.Observable((subscriber) => {
+        const abort$ = new Observable((subscriber) => {
             const getError = () => new GolemAbortError("Execution of script has been aborted", signal.reason);
             if (signal.aborted) {
                 subscriber.error(getError());
@@ -4384,7 +4363,7 @@ class ExeScriptExecutor {
         const results$ = stream
             ? this.streamingBatch(batch.batchId, batch.batchSize)
             : this.pollingBatch(batch.batchId, maxRetries);
-        return mergeUntilFirstComplete(abort$, results$).pipe(rxjs.finalize(cleanup));
+        return mergeUntilFirstComplete(abort$, results$).pipe(finalize(cleanup));
     }
     async send(script) {
         return withTimeout(this.activityModule.executeScript(this.activity, script), 10000);
@@ -4395,7 +4374,7 @@ class ExeScriptExecutor {
         const { id: activityId, agreement } = this.activity;
         const { activityExeBatchResultPollIntervalSeconds, activityExeBatchResultMaxRetries } = this.options;
         const { logger, activity, activityModule } = this;
-        return new rxjs.Observable((subscriber) => {
+        return new Observable((subscriber) => {
             const pollForResults = async () => {
                 if (isCompleted) {
                     subscriber.complete();
@@ -4443,18 +4422,18 @@ class ExeScriptExecutor {
             return () => {
                 isCompleted = true;
             };
-        }).pipe(rxjs.catchError((error) => {
+        }).pipe(catchError((error) => {
             if (error instanceof GolemWorkError) {
                 throw error;
             }
-            throw new GolemWorkError(`Unable to get activity results. ${error}`, exports.WorkErrorCode.ActivityResultsFetchingFailed, agreement, activity, activity.provider, error);
+            throw new GolemWorkError(`Unable to get activity results. ${error}`, WorkErrorCode.ActivityResultsFetchingFailed, agreement, activity, activity.provider, error);
         }));
     }
     streamingBatch(batchId, batchSize) {
-        return this.activityModule.observeStreamingBatchEvents(this.activity, batchId).pipe(rxjs.map((resultEvents) => this.parseEventToResult(resultEvents, batchSize)), rxjs.takeWhile((result) => !result.isBatchFinished, true), 
+        return this.activityModule.observeStreamingBatchEvents(this.activity, batchId).pipe(map((resultEvents) => this.parseEventToResult(resultEvents, batchSize)), takeWhile((result) => !result.isBatchFinished, true), 
         // transform to domain error
-        rxjs.catchError((error) => {
-            throw new GolemWorkError(`Unable to get activity results. ${error}`, exports.WorkErrorCode.ActivityResultsFetchingFailed, this.activity.agreement, this.activity, this.activity.provider, error);
+        catchError((error) => {
+            throw new GolemWorkError(`Unable to get activity results. ${error}`, WorkErrorCode.ActivityResultsFetchingFailed, this.activity.agreement, this.activity, this.activity.provider, error);
         }));
     }
     parseEventToResult(event, batchSize) {
@@ -4484,7 +4463,7 @@ class ExeScriptExecutor {
 class ActivityModuleImpl {
     constructor(services) {
         this.services = services;
-        this.events = new eventemitter3.EventEmitter();
+        this.events = new EventEmitter();
         this.logger = defaultLogger("activity");
         this.logger = services.logger;
         this.activityApi = services.activityApi;
@@ -4550,7 +4529,7 @@ class ActivityModuleImpl {
     }
     observeStreamingBatchEvents(activity, batchId, commandIndex) {
         this.logger.debug("Observing streaming batch events", { activityId: activity.id, batchId });
-        return this.activityApi.getExecBatchEvents(activity, batchId, commandIndex).pipe(rxjs.tap(async (event) => {
+        return this.activityApi.getExecBatchEvents(activity, batchId, commandIndex).pipe(tap(async (event) => {
             this.events.emit("batchEventsReceived", {
                 activity: await this.refreshActivity(activity).catch(() => {
                     this.logger.warn("Failed to refresh activity after batch events received", { activityId: activity.id });
@@ -4559,7 +4538,7 @@ class ActivityModuleImpl {
                 batchId,
                 event,
             });
-        }), rxjs.catchError(async (error) => {
+        }), catchError(async (error) => {
             this.events.emit("errorGettingBatchEvents", {
                 activity: await this.refreshActivity(activity).catch(() => {
                     this.logger.warn("Failed to refresh activity after batch events error", { activityId: activity.id });
@@ -4682,7 +4661,7 @@ class ActivityModuleImpl {
 }
 
 var _GolemNetworkError_network;
-exports.NetworkErrorCode = void 0;
+var NetworkErrorCode;
 (function (NetworkErrorCode) {
     NetworkErrorCode["ServiceNotInitialized"] = "ServiceNotInitialized";
     NetworkErrorCode["NetworkSetupMissing"] = "NetworkSetupMissing";
@@ -4695,7 +4674,7 @@ exports.NetworkErrorCode = void 0;
     NetworkErrorCode["NetworkRemovalFailed"] = "NetworkRemovalFailed";
     NetworkErrorCode["GettingIdentityFailed"] = "GettingIdentityFailed";
     NetworkErrorCode["NetworkRemoved"] = "NetworkRemoved";
-})(exports.NetworkErrorCode || (exports.NetworkErrorCode = {}));
+})(NetworkErrorCode || (NetworkErrorCode = {}));
 class GolemNetworkError extends GolemModuleError {
     constructor(message, code, network, previous) {
         super(message, code, previous);
@@ -4710,21 +4689,21 @@ class GolemNetworkError extends GolemModuleError {
 }
 _GolemNetworkError_network = new WeakMap();
 
-exports.NetworkState = void 0;
+var NetworkState;
 (function (NetworkState) {
     NetworkState["Active"] = "Active";
     NetworkState["Removed"] = "Removed";
-})(exports.NetworkState || (exports.NetworkState = {}));
+})(NetworkState || (NetworkState = {}));
 class Network {
     constructor(id, ip, mask, gateway) {
         this.id = id;
         this.nodes = new Map();
-        this.state = exports.NetworkState.Active;
-        this.ipRange = ipNum.IPv4CidrRange.fromCidr(mask ? `${ip.split("/")[0]}/${ipNum.IPv4Mask.fromDecimalDottedString(mask).prefix}` : ip);
+        this.state = NetworkState.Active;
+        this.ipRange = IPv4CidrRange.fromCidr(mask ? `${ip.split("/")[0]}/${IPv4Mask.fromDecimalDottedString(mask).prefix}` : ip);
         this.ipIterator = this.ipRange[Symbol.iterator]();
         this.ip = this.getFirstAvailableIpAddress();
         this.mask = this.ipRange.getPrefix().toMask();
-        this.gateway = gateway ? new ipNum.IPv4(gateway) : undefined;
+        this.gateway = gateway ? new IPv4(gateway) : undefined;
     }
     /**
      * Returns information about the network.
@@ -4745,10 +4724,10 @@ class Network {
      */
     addNode(node) {
         if (this.isRemoved()) {
-            throw new GolemNetworkError(`Unable to add node ${node.id} to removed network`, exports.NetworkErrorCode.NetworkRemoved, this.getNetworkInfo());
+            throw new GolemNetworkError(`Unable to add node ${node.id} to removed network`, NetworkErrorCode.NetworkRemoved, this.getNetworkInfo());
         }
         if (this.hasNode(node)) {
-            throw new GolemNetworkError(`Node ${node.id} has already been added to this network`, exports.NetworkErrorCode.AddressAlreadyAssigned);
+            throw new GolemNetworkError(`Node ${node.id} has already been added to this network`, NetworkErrorCode.AddressAlreadyAssigned);
         }
         this.nodes.set(node.id, node);
     }
@@ -4765,18 +4744,18 @@ class Network {
      */
     removeNode(node) {
         if (this.isRemoved()) {
-            throw new GolemNetworkError(`Unable to remove node ${node.id} from removed network`, exports.NetworkErrorCode.NetworkRemoved, this.getNetworkInfo());
+            throw new GolemNetworkError(`Unable to remove node ${node.id} from removed network`, NetworkErrorCode.NetworkRemoved, this.getNetworkInfo());
         }
         if (!this.hasNode(node)) {
-            throw new GolemNetworkError(`There is no node ${node.id} in the network`, exports.NetworkErrorCode.NodeRemovalFailed);
+            throw new GolemNetworkError(`There is no node ${node.id} in the network`, NetworkErrorCode.NodeRemovalFailed);
         }
         this.nodes.delete(node.id);
     }
     markAsRemoved() {
-        if (this.state === exports.NetworkState.Removed) {
-            throw new GolemNetworkError("Network already removed", exports.NetworkErrorCode.NetworkRemoved, this.getNetworkInfo());
+        if (this.state === NetworkState.Removed) {
+            throw new GolemNetworkError("Network already removed", NetworkErrorCode.NetworkRemoved, this.getNetworkInfo());
         }
-        this.state = exports.NetworkState.Removed;
+        this.state = NetworkState.Removed;
     }
     /**
      * Returns the first available IP address in the network.
@@ -4784,7 +4763,7 @@ class Network {
     getFirstAvailableIpAddress() {
         const ip = this.ipIterator.next().value;
         if (!ip)
-            throw new GolemNetworkError(`No more addresses available in ${this.ipRange.toCidrString()}`, exports.NetworkErrorCode.NoAddressesAvailable, this.getNetworkInfo());
+            throw new GolemNetworkError(`No more addresses available in ${this.ipRange.toCidrString()}`, NetworkErrorCode.NoAddressesAvailable, this.getNetworkInfo());
         return ip;
     }
     /**
@@ -4792,7 +4771,7 @@ class Network {
      * @param ip - The IPv4 address to check.
      */
     isIpInNetwork(ip) {
-        return this.ipRange.contains(new ipNum.IPv4CidrRange(ip, new ipNum.IPv4Prefix(BigInt(this.mask.prefix))));
+        return this.ipRange.contains(new IPv4CidrRange(ip, new IPv4Prefix(BigInt(this.mask.prefix))));
     }
     /**
      * Checks if a given node ID is unique within the network.
@@ -4806,13 +4785,13 @@ class Network {
      */
     isNodeIpUnique(ip) {
         for (const node of this.nodes.values()) {
-            if (new ipNum.IPv4(node.ip).isEquals(ip))
+            if (new IPv4(node.ip).isEquals(ip))
                 return false;
         }
         return true;
     }
     isRemoved() {
-        return this.state === exports.NetworkState.Removed;
+        return this.state === NetworkState.Removed;
     }
 }
 
@@ -4850,7 +4829,7 @@ class NetworkNode {
 
 class NetworkModuleImpl {
     constructor(deps) {
-        this.events = new eventemitter3.EventEmitter();
+        this.events = new EventEmitter();
         this.logger = defaultLogger("network");
         this.lock = new AsyncLock();
         this.networkApi = deps.networkApi;
@@ -4864,11 +4843,11 @@ class NetworkModuleImpl {
         try {
             const ipDecimalDottedString = ((_b = (_a = options === null || options === void 0 ? void 0 : options.ip) === null || _a === void 0 ? void 0 : _a.split("/")) === null || _b === void 0 ? void 0 : _b[0]) || "192.168.0.0";
             const maskBinaryNotation = parseInt(((_d = (_c = options === null || options === void 0 ? void 0 : options.ip) === null || _c === void 0 ? void 0 : _c.split("/")) === null || _d === void 0 ? void 0 : _d[1]) || "24");
-            const maskPrefix = (options === null || options === void 0 ? void 0 : options.mask) ? ipNum.IPv4Mask.fromDecimalDottedString(options.mask).prefix : maskBinaryNotation;
-            const ipRange = ipNum.IPv4CidrRange.fromCidr(`${ipNum.IPv4.fromString(ipDecimalDottedString)}/${maskPrefix}`);
+            const maskPrefix = (options === null || options === void 0 ? void 0 : options.mask) ? IPv4Mask.fromDecimalDottedString(options.mask).prefix : maskBinaryNotation;
+            const ipRange = IPv4CidrRange.fromCidr(`${IPv4.fromString(ipDecimalDottedString)}/${maskPrefix}`);
             const ip = ipRange.getFirst();
             const mask = ipRange.getPrefix().toMask();
-            const gateway = (options === null || options === void 0 ? void 0 : options.gateway) ? new ipNum.IPv4(options.gateway) : undefined;
+            const gateway = (options === null || options === void 0 ? void 0 : options.gateway) ? new IPv4(options.gateway) : undefined;
             const network = await this.networkApi.createNetwork({
                 ip: ip.toString(),
                 mask: mask === null || mask === void 0 ? void 0 : mask.toString(),
@@ -4885,7 +4864,7 @@ class NetworkModuleImpl {
             const message = getMessageFromApiError(err);
             const error = err instanceof GolemNetworkError
                 ? err
-                : new GolemNetworkError(`Unable to create network. ${message}`, exports.NetworkErrorCode.NetworkCreationFailed, undefined, err);
+                : new GolemNetworkError(`Unable to create network. ${message}`, NetworkErrorCode.NetworkCreationFailed, undefined, err);
             this.events.emit("errorCreatingNetwork", { error });
             throw error;
         }
@@ -4910,10 +4889,10 @@ class NetworkModuleImpl {
         return await this.lock.acquire(`net-${network.id}`, async () => {
             try {
                 if (!network.isNodeIdUnique(nodeId)) {
-                    throw new GolemNetworkError(`Network ID '${nodeId}' has already been assigned in this network.`, exports.NetworkErrorCode.AddressAlreadyAssigned, network.getNetworkInfo());
+                    throw new GolemNetworkError(`Network ID '${nodeId}' has already been assigned in this network.`, NetworkErrorCode.AddressAlreadyAssigned, network.getNetworkInfo());
                 }
                 if (network.isRemoved()) {
-                    throw new GolemNetworkError(`Unable to create network node ${nodeId}. Network has already been removed`, exports.NetworkErrorCode.NetworkRemoved, network.getNetworkInfo());
+                    throw new GolemNetworkError(`Unable to create network node ${nodeId}. Network has already been removed`, NetworkErrorCode.NetworkRemoved, network.getNetworkInfo());
                 }
                 const ipv4 = this.getFreeIpInNetwork(network, nodeIp);
                 const node = await this.networkApi.createNetworkNode(network, nodeId, ipv4.toString());
@@ -4933,7 +4912,7 @@ class NetworkModuleImpl {
         return await this.lock.acquire(`net-${network.id}`, async () => {
             try {
                 if (!network.hasNode(node)) {
-                    throw new GolemNetworkError(`The network node ${node.id} does not belong to the network`, exports.NetworkErrorCode.NodeRemovalFailed, network.getNetworkInfo());
+                    throw new GolemNetworkError(`The network node ${node.id} does not belong to the network`, NetworkErrorCode.NodeRemovalFailed, network.getNetworkInfo());
                 }
                 if (network.isRemoved()) {
                     this.logger.debug(`Unable to remove network node ${node.id}. Network has already been removed`, {
@@ -4960,12 +4939,12 @@ class NetworkModuleImpl {
         if (!targetIp) {
             return network.getFirstAvailableIpAddress();
         }
-        const ipv4 = ipNum.IPv4.fromString(targetIp);
+        const ipv4 = IPv4.fromString(targetIp);
         if (!network.isIpInNetwork(ipv4)) {
-            throw new GolemNetworkError(`The given IP ('${targetIp}') address must belong to the network ('${network.getNetworkInfo().ip}').`, exports.NetworkErrorCode.AddressOutOfRange, network.getNetworkInfo());
+            throw new GolemNetworkError(`The given IP ('${targetIp}') address must belong to the network ('${network.getNetworkInfo().ip}').`, NetworkErrorCode.AddressOutOfRange, network.getNetworkInfo());
         }
         if (!network.isNodeIpUnique(ipv4)) {
-            throw new GolemNetworkError(`IP '${targetIp.toString()}' has already been assigned in this network.`, exports.NetworkErrorCode.AddressAlreadyAssigned, network.getNetworkInfo());
+            throw new GolemNetworkError(`IP '${targetIp.toString()}' has already been assigned in this network.`, NetworkErrorCode.AddressAlreadyAssigned, network.getNetworkInfo());
         }
         return ipv4;
     }
@@ -4984,7 +4963,7 @@ class ResourceRental {
         this.activityModule = activityModule;
         this.logger = logger;
         this.resourceRentalOptions = resourceRentalOptions;
-        this.events = new eventemitter3.EventEmitter();
+        this.events = new EventEmitter();
         this.currentExeUnit = null;
         this.abortController = new AbortController();
         this.networkNode = (_a = this.resourceRentalOptions) === null || _a === void 0 ? void 0 : _a.networkNode;
@@ -5114,7 +5093,7 @@ const MAX_POOL_SIZE = 100;
  */
 class ResourceRentalPool {
     constructor(options) {
-        this.events = new eventemitter3.EventEmitter();
+        this.events = new EventEmitter();
         /**
          * Pool of resource rentals that do not have an activity
          */
@@ -5182,7 +5161,7 @@ class ResourceRentalPool {
                 throw error;
             }
             this.events.emit("errorCreatingRental", {
-                error: new GolemMarketError("Creating resource rental failed", exports.MarketErrorCode.ResourceRentalCreationFailed, error),
+                error: new GolemMarketError("Creating resource rental failed", MarketErrorCode.ResourceRentalCreationFailed, error),
             });
             this.logger.error("Creating resource rental failed", error);
             throw error;
@@ -5329,7 +5308,7 @@ class ResourceRentalPool {
         catch (error) {
             this.events.emit("errorDestroyingRental", {
                 agreement: resourceRental.agreement,
-                error: new GolemMarketError("Destroying resource rental failed", exports.MarketErrorCode.ResourceRentalTerminationFailed, error),
+                error: new GolemMarketError("Destroying resource rental failed", MarketErrorCode.ResourceRentalTerminationFailed, error),
             });
             this.logger.error("Destroying resource rental failed", error);
         }
@@ -5452,7 +5431,7 @@ class ResourceRentalPool {
 class RentalModuleImpl {
     constructor(deps) {
         this.deps = deps;
-        this.events = new eventemitter3.EventEmitter();
+        this.events = new EventEmitter();
     }
     createResourceRental(agreement, allocation, options) {
         const paymentProcess = this.deps.paymentModule.createAgreementPaymentProcess(agreement, allocation, options === null || options === void 0 ? void 0 : options.payment);
@@ -5483,18 +5462,18 @@ class PaymentApiAdapter {
         this.invoiceRepo = invoiceRepo;
         this.debitNoteRepo = debitNoteRepo;
         this.logger = logger;
-        this.receivedInvoices$ = new rxjs.Subject();
-        this.receivedDebitNotes$ = new rxjs.Subject();
+        this.receivedInvoices$ = new Subject();
+        this.receivedDebitNotes$ = new Subject();
     }
     async connect() {
         this.logger.debug("Connecting Payment API Adapter");
-        rxjs.from(this.yagna.invoiceEvents$)
-            .pipe(rxjs.mergeMap((invoice) => {
+        from(this.yagna.invoiceEvents$)
+            .pipe(mergeMap((invoice) => {
             if (invoice && invoice.invoiceId) {
                 return this.invoiceRepo.getById(invoice.invoiceId);
             }
             else {
-                return rxjs.of();
+                return of();
             }
         }))
             .subscribe({
@@ -5502,13 +5481,13 @@ class PaymentApiAdapter {
             error: (err) => this.receivedInvoices$.error(err),
             complete: () => this.logger.debug("Finished reading InvoiceEvents"),
         });
-        rxjs.from(this.yagna.debitNoteEvents$)
-            .pipe(rxjs.mergeMap((debitNote) => {
+        from(this.yagna.debitNoteEvents$)
+            .pipe(mergeMap((debitNote) => {
             if (debitNote && debitNote.debitNoteId) {
                 return this.debitNoteRepo.getById(debitNote.debitNoteId);
             }
             else {
-                return rxjs.of();
+                return of();
             }
         }))
             .subscribe({
@@ -5534,7 +5513,7 @@ class PaymentApiAdapter {
         }
         catch (error) {
             const message = getMessageFromApiError(error);
-            throw new GolemPaymentError(`Could not accept invoice. ${message}`, exports.PaymentErrorCode.InvoiceAcceptanceFailed, allocation, invoice.provider);
+            throw new GolemPaymentError(`Could not accept invoice. ${message}`, PaymentErrorCode.InvoiceAcceptanceFailed, allocation, invoice.provider);
         }
     }
     async rejectInvoice(invoice, reason) {
@@ -5548,7 +5527,7 @@ class PaymentApiAdapter {
         }
         catch (error) {
             const message = getMessageFromApiError(error);
-            throw new GolemPaymentError(`Could not reject invoice. ${message}`, exports.PaymentErrorCode.InvoiceRejectionFailed, undefined, invoice.provider);
+            throw new GolemPaymentError(`Could not reject invoice. ${message}`, PaymentErrorCode.InvoiceRejectionFailed, undefined, invoice.provider);
         }
     }
     async acceptDebitNote(debitNote, allocation, amount) {
@@ -5561,7 +5540,7 @@ class PaymentApiAdapter {
         }
         catch (error) {
             const message = getMessageFromApiError(error);
-            throw new GolemPaymentError(`Could not accept debit note. ${message}`, exports.PaymentErrorCode.DebitNoteAcceptanceFailed, allocation, debitNote.provider);
+            throw new GolemPaymentError(`Could not accept debit note. ${message}`, PaymentErrorCode.DebitNoteAcceptanceFailed, allocation, debitNote.provider);
         }
     }
     async rejectDebitNote(debitNote) {
@@ -5577,7 +5556,7 @@ class PaymentApiAdapter {
         }
         catch (error) {
             const message = getMessageFromApiError(error);
-            throw new GolemPaymentError(`Could not reject debit note. ${message}`, exports.PaymentErrorCode.DebitNoteRejectionFailed, undefined, debitNote.provider, error);
+            throw new GolemPaymentError(`Could not reject debit note. ${message}`, PaymentErrorCode.DebitNoteRejectionFailed, undefined, debitNote.provider, error);
         }
     }
     async getAllocation(id) {
@@ -5587,7 +5566,7 @@ class PaymentApiAdapter {
         }
         catch (error) {
             const message = getMessageFromApiError(error);
-            throw new GolemPaymentError(`Could not retrieve allocation. ${message}`, exports.PaymentErrorCode.AllocationCreationFailed, undefined, undefined, error);
+            throw new GolemPaymentError(`Could not retrieve allocation. ${message}`, PaymentErrorCode.AllocationCreationFailed, undefined, undefined, error);
         }
     }
     async createAllocation(params) {
@@ -5612,7 +5591,7 @@ class PaymentApiAdapter {
         }
         catch (error) {
             const message = getMessageFromApiError(error);
-            throw new GolemPaymentError(`Could not create new allocation. ${message}`, exports.PaymentErrorCode.AllocationCreationFailed, undefined, undefined, error);
+            throw new GolemPaymentError(`Could not create new allocation. ${message}`, PaymentErrorCode.AllocationCreationFailed, undefined, undefined, error);
         }
     }
     async releaseAllocation(allocation) {
@@ -5621,7 +5600,7 @@ class PaymentApiAdapter {
             return this.yagna.payment.releaseAllocation(allocation.id);
         }
         catch (error) {
-            throw new GolemPaymentError(`Could not release allocation. ${((_b = (_a = error.response) === null || _a === void 0 ? void 0 : _a.data) === null || _b === void 0 ? void 0 : _b.message) || error}`, exports.PaymentErrorCode.AllocationReleaseFailed, allocation, undefined, error);
+            throw new GolemPaymentError(`Could not release allocation. ${((_b = (_a = error.response) === null || _a === void 0 ? void 0 : _a.data) === null || _b === void 0 ? void 0 : _b.message) || error}`, PaymentErrorCode.AllocationReleaseFailed, allocation, undefined, error);
         }
     }
 }
@@ -5650,7 +5629,7 @@ class MarketApiAdapter {
         }
     }
     collectMarketProposalEvents(demand) {
-        return new rxjs.Observable((observer) => {
+        return new Observable((observer) => {
             let isCancelled = false;
             const longPoll = async () => {
                 if (isCancelled) {
@@ -5746,7 +5725,7 @@ class MarketApiAdapter {
         }
         catch (error) {
             const message = getMessageFromApiError(error);
-            throw new GolemMarketError(`Failed to reject proposal. ${message}`, exports.MarketErrorCode.ProposalRejectionFailed, error);
+            throw new GolemMarketError(`Failed to reject proposal. ${message}`, MarketErrorCode.ProposalRejectionFailed, error);
         }
     }
     buildDemandRequestBody(decorations) {
@@ -5778,7 +5757,7 @@ class MarketApiAdapter {
             return this.agreementRepo.getById(agreement.id);
         }
         catch (error) {
-            throw new GolemMarketError(`Unable to confirm agreement with provider`, exports.MarketErrorCode.AgreementApprovalFailed, error);
+            throw new GolemMarketError(`Unable to confirm agreement with provider`, MarketErrorCode.AgreementApprovalFailed, error);
         }
     }
     async createAgreement(proposal, options) {
@@ -5790,7 +5769,7 @@ class MarketApiAdapter {
             };
             const agreementId = await withTimeout(this.yagnaApi.market.createAgreement(agreementProposalRequest), 30000);
             if (typeof agreementId !== "string") {
-                throw new GolemMarketError(`Unable to create agreement. Invalid response from the server`, exports.MarketErrorCode.ResourceRentalCreationFailed);
+                throw new GolemMarketError(`Unable to create agreement. Invalid response from the server`, MarketErrorCode.ResourceRentalCreationFailed);
             }
             const agreement = await this.agreementRepo.getById(agreementId);
             this.logger.debug(`Agreement created`, {
@@ -5802,7 +5781,7 @@ class MarketApiAdapter {
         }
         catch (error) {
             const message = getMessageFromApiError(error);
-            throw new GolemMarketError(`Unable to create agreement ${message}`, exports.MarketErrorCode.ResourceRentalCreationFailed, error);
+            throw new GolemMarketError(`Unable to create agreement ${message}`, MarketErrorCode.ResourceRentalCreationFailed, error);
         }
     }
     async proposeAgreement(proposal, options) {
@@ -5810,7 +5789,7 @@ class MarketApiAdapter {
         const confirmed = await this.confirmAgreement(agreement);
         const state = confirmed.getState();
         if (state !== "Approved") {
-            throw new GolemMarketError(`Agreement ${agreement.id} cannot be approved. Current state: ${state}`, exports.MarketErrorCode.AgreementApprovalFailed);
+            throw new GolemMarketError(`Agreement ${agreement.id} cannot be approved. Current state: ${state}`, MarketErrorCode.AgreementApprovalFailed);
         }
         this.logger.debug("Established agreement", agreement);
         return confirmed;
@@ -5837,11 +5816,11 @@ class MarketApiAdapter {
         }
         catch (error) {
             const message = getMessageFromApiError(error);
-            throw new GolemMarketError(`Unable to terminate agreement ${agreement.id}. ${message}`, exports.MarketErrorCode.ResourceRentalTerminationFailed, error);
+            throw new GolemMarketError(`Unable to terminate agreement ${agreement.id}. ${message}`, MarketErrorCode.ResourceRentalTerminationFailed, error);
         }
     }
     collectAgreementEvents() {
-        return this.yagnaApi.agreementEvents$.pipe(rxjs.switchMap((event) => new rxjs.Observable((observer) => {
+        return this.yagnaApi.agreementEvents$.pipe(switchMap((event) => new Observable((observer) => {
             try {
                 this.logger.debug("Market API Adapter received agreement event", { event });
                 const timestamp = new Date(Date.parse(event.eventDate));
@@ -5892,7 +5871,7 @@ class MarketApiAdapter {
                     .catch((err) => this.logger.error("Failed to load agreement", { agreementId: event.agreementId, err }));
             }
             catch (err) {
-                const golemMarketError = new GolemMarketError("Error while processing agreement event from yagna", exports.MarketErrorCode.InternalError, err);
+                const golemMarketError = new GolemMarketError("Error while processing agreement event from yagna", MarketErrorCode.InternalError, err);
                 this.logger.error(golemMarketError.message, { event, err });
                 observer.error(err);
             }
@@ -5903,7 +5882,7 @@ class MarketApiAdapter {
     }
     scan(spec) {
         const ac = new AbortController();
-        return new rxjs.Observable((observer) => {
+        return new Observable((observer) => {
             this.yagnaApi.market
                 .beginScan({
                 type: "offer",
@@ -5944,7 +5923,7 @@ class MarketApiAdapter {
             })
                 .catch((error) => {
                 const message = getMessageFromApiError(error);
-                observer.error(new GolemMarketError(`Error while scanning for offers. ${message}`, exports.MarketErrorCode.ScanFailed, error));
+                observer.error(new GolemMarketError(`Error while scanning for offers. ${message}`, MarketErrorCode.ScanFailed, error));
             });
             return () => {
                 ac.abort();
@@ -5966,14 +5945,14 @@ class InvoiceRepository {
         }
         catch (error) {
             const message = getMessageFromApiError(error);
-            throw new GolemPaymentError(`Failed to get debit note: ${message}`, exports.PaymentErrorCode.CouldNotGetInvoice, undefined, undefined, error);
+            throw new GolemPaymentError(`Failed to get debit note: ${message}`, PaymentErrorCode.CouldNotGetInvoice, undefined, undefined, error);
         }
         try {
             agreement = await this.marketClient.getAgreement(model.agreementId);
         }
         catch (error) {
             const message = getMessageFromApiError(error);
-            throw new GolemMarketError(`Failed to get agreement for invoice: ${message}`, exports.MarketErrorCode.CouldNotGetAgreement, error);
+            throw new GolemMarketError(`Failed to get agreement for invoice: ${message}`, MarketErrorCode.CouldNotGetAgreement, error);
         }
         const providerInfo = {
             id: model.issuerId,
@@ -5997,14 +5976,14 @@ class DebitNoteRepository {
         }
         catch (error) {
             const message = getMessageFromApiError(error);
-            throw new GolemPaymentError(`Failed to get debit note: ${message}`, exports.PaymentErrorCode.CouldNotGetDebitNote, undefined, undefined, error);
+            throw new GolemPaymentError(`Failed to get debit note: ${message}`, PaymentErrorCode.CouldNotGetDebitNote, undefined, undefined, error);
         }
         try {
             agreement = await this.marketClient.getAgreement(model.agreementId);
         }
         catch (error) {
             const message = getMessageFromApiError(error);
-            throw new GolemMarketError(`Failed to get agreement for debit note: ${message}`, exports.MarketErrorCode.CouldNotGetAgreement, error);
+            throw new GolemMarketError(`Failed to get agreement for debit note: ${message}`, MarketErrorCode.CouldNotGetAgreement, error);
         }
         const providerInfo = {
             id: model.issuerId,
@@ -6038,7 +6017,7 @@ class ActivityApiAdapter {
         }
         catch (error) {
             const message = getMessageFromApiError(error);
-            throw new GolemWorkError(`Failed to create activity: ${message}`, exports.WorkErrorCode.ActivityCreationFailed, agreement, undefined, agreement.provider);
+            throw new GolemWorkError(`Failed to create activity: ${message}`, WorkErrorCode.ActivityCreationFailed, agreement, undefined, agreement.provider);
         }
     }
     async destroyActivity(activity) {
@@ -6048,7 +6027,7 @@ class ActivityApiAdapter {
         }
         catch (error) {
             const message = getMessageFromApiError(error);
-            throw new GolemWorkError(`Failed to destroy activity: ${message}`, exports.WorkErrorCode.ActivityDestroyingFailed, activity.agreement, activity, activity.agreement.provider);
+            throw new GolemWorkError(`Failed to destroy activity: ${message}`, WorkErrorCode.ActivityDestroyingFailed, activity.agreement, activity, activity.agreement.provider);
         }
     }
     async getActivityState(id) {
@@ -6060,7 +6039,7 @@ class ActivityApiAdapter {
         }
         catch (error) {
             const message = getMessageFromApiError(error);
-            throw new GolemWorkError(`Failed to execute script. ${message}`, exports.WorkErrorCode.ScriptExecutionFailed, activity.agreement, activity, activity.agreement.provider);
+            throw new GolemWorkError(`Failed to execute script. ${message}`, WorkErrorCode.ScriptExecutionFailed, activity.agreement, activity, activity.agreement.provider);
         }
     }
     async getExecBatchResults(activity, batchId, commandIndex, timeout) {
@@ -6070,7 +6049,7 @@ class ActivityApiAdapter {
         }
         catch (error) {
             const message = getMessageFromApiError(error);
-            throw new GolemWorkError(`Failed to fetch activity results. ${message}`, exports.WorkErrorCode.ActivityResultsFetchingFailed, activity.agreement, activity, activity.provider, error);
+            throw new GolemWorkError(`Failed to fetch activity results. ${message}`, WorkErrorCode.ActivityResultsFetchingFailed, activity.agreement, activity, activity.provider, error);
         }
     }
     getExecBatchEvents(activity, batchId) {
@@ -6114,29 +6093,29 @@ class ActivityRepository {
         try {
             const agreementId = await this.state.getActivityAgreement(id);
             const agreement = await this.agreementRepo.getById(agreementId);
-            const previousState = (_a = this.stateCache.get(id)) !== null && _a !== void 0 ? _a : exports.ActivityStateEnum.New;
+            const previousState = (_a = this.stateCache.get(id)) !== null && _a !== void 0 ? _a : ActivityStateEnum.New;
             const state = await this.getStateOfActivity(id);
             const usage = await this.state.getActivityUsage(id);
-            return new Activity(id, agreement, state !== null && state !== void 0 ? state : exports.ActivityStateEnum.Unknown, previousState, usage);
+            return new Activity(id, agreement, state !== null && state !== void 0 ? state : ActivityStateEnum.Unknown, previousState, usage);
         }
         catch (error) {
             const message = getMessageFromApiError(error);
-            throw new GolemWorkError(`Failed to get activity: ${message}`, exports.WorkErrorCode.ActivityStatusQueryFailed, undefined, undefined, undefined, error);
+            throw new GolemWorkError(`Failed to get activity: ${message}`, WorkErrorCode.ActivityStatusQueryFailed, undefined, undefined, undefined, error);
         }
     }
     async getStateOfActivity(id) {
         try {
             const yagnaStateResponse = await this.state.getActivityState(id);
             if (!yagnaStateResponse || yagnaStateResponse.state[0] === null) {
-                return exports.ActivityStateEnum.Unknown;
+                return ActivityStateEnum.Unknown;
             }
-            const state = exports.ActivityStateEnum[yagnaStateResponse.state[0]];
+            const state = ActivityStateEnum[yagnaStateResponse.state[0]];
             this.stateCache.set(id, state);
             return state;
         }
         catch (error) {
             const message = getMessageFromApiError(error);
-            throw new GolemWorkError(`Failed to get activity state: ${message}`, exports.WorkErrorCode.ActivityStatusQueryFailed, undefined, undefined, undefined, error);
+            throw new GolemWorkError(`Failed to get activity state: ${message}`, WorkErrorCode.ActivityStatusQueryFailed, undefined, undefined, undefined, error);
         }
     }
 }
@@ -6153,7 +6132,7 @@ class AgreementRepository {
         }
         catch (error) {
             const message = getMessageFromApiError(error);
-            throw new GolemMarketError(`Failed to get agreement: ${message}`, exports.MarketErrorCode.CouldNotGetAgreement, error);
+            throw new GolemMarketError(`Failed to get agreement: ${message}`, MarketErrorCode.CouldNotGetAgreement, error);
         }
         const { demandId } = dto.demand;
         const demand = this.demandRepo.getById(demandId);
@@ -6187,7 +6166,7 @@ class ProposalRepository {
         }
         catch (error) {
             const message = error.message;
-            throw new GolemMarketError(`Failed to get proposal: ${message}`, exports.MarketErrorCode.CouldNotGetProposal, error);
+            throw new GolemMarketError(`Failed to get proposal: ${message}`, MarketErrorCode.CouldNotGetProposal, error);
         }
     }
 }
@@ -6222,7 +6201,7 @@ class StorageServerAdapter {
         if (!this.storage.isReady()) {
             throw new GolemInternalError("The GFTP server as to be initialized before publishing a file ");
         }
-        if (!fs.existsSync(sourcePath) || fs.lstatSync(sourcePath).isDirectory()) {
+        if (!fs__default.existsSync(sourcePath) || fs__default.lstatSync(sourcePath).isDirectory()) {
             throw new GolemConfigError(`File ${sourcePath} does not exist o is a directory`);
         }
         const fileUrl = await this.storage.publishFile(sourcePath);
@@ -6244,8 +6223,8 @@ class StorageServerAdapter {
         return this.published.has(sourcePath);
     }
     async calculateFileHash(localPath) {
-        const fileStream = fs.createReadStream(localPath);
-        const hash = jsSha3.sha3_224.create();
+        const fileStream = fs__default.createReadStream(localPath);
+        const hash = jsSha3__default.sha3_224.create();
         return new Promise((resolve, reject) => {
             fileStream.on("data", (chunk) => hash.update(chunk));
             fileStream.on("end", () => resolve(hash.hex()));
@@ -6265,7 +6244,7 @@ class NetworkApiAdapter {
         }
         catch (error) {
             const message = getMessageFromApiError(error);
-            throw new GolemNetworkError(`Unable to create network. ${message}`, exports.NetworkErrorCode.NetworkCreationFailed, undefined, error);
+            throw new GolemNetworkError(`Unable to create network. ${message}`, NetworkErrorCode.NetworkCreationFailed, undefined, error);
         }
     }
     async removeNetwork(network) {
@@ -6274,7 +6253,7 @@ class NetworkApiAdapter {
         }
         catch (error) {
             const message = getMessageFromApiError(error);
-            throw new GolemNetworkError(`Unable to remove network. ${message}`, exports.NetworkErrorCode.NetworkRemovalFailed, network.getNetworkInfo(), error);
+            throw new GolemNetworkError(`Unable to remove network. ${message}`, NetworkErrorCode.NetworkRemovalFailed, network.getNetworkInfo(), error);
         }
     }
     async createNetworkNode(network, nodeId, nodeIp) {
@@ -6285,7 +6264,7 @@ class NetworkApiAdapter {
         }
         catch (error) {
             const message = getMessageFromApiError(error);
-            throw new GolemNetworkError(`Unable to add node to network. ${message}`, exports.NetworkErrorCode.NodeAddingFailed, network.getNetworkInfo(), error);
+            throw new GolemNetworkError(`Unable to add node to network. ${message}`, NetworkErrorCode.NodeAddingFailed, network.getNetworkInfo(), error);
         }
     }
     async removeNetworkNode(network, node) {
@@ -6294,7 +6273,7 @@ class NetworkApiAdapter {
         }
         catch (error) {
             const message = getMessageFromApiError(error);
-            throw new GolemNetworkError(`Unable to remove network node. ${message}`, exports.NetworkErrorCode.NodeRemovalFailed, network.getNetworkInfo(), error);
+            throw new GolemNetworkError(`Unable to remove network node. ${message}`, NetworkErrorCode.NodeRemovalFailed, network.getNetworkInfo(), error);
         }
     }
     async getIdentity() {
@@ -6303,7 +6282,7 @@ class NetworkApiAdapter {
         }
         catch (error) {
             const message = getMessageFromApiError(error);
-            throw new GolemNetworkError(`Unable to get requestor identity. ${message}`, exports.NetworkErrorCode.GettingIdentityFailed, undefined, error);
+            throw new GolemNetworkError(`Unable to get requestor identity. ${message}`, NetworkErrorCode.GettingIdentityFailed, undefined, error);
         }
     }
 }
@@ -6331,7 +6310,7 @@ function getFactory(defaultFactory, override) {
 class GolemNetwork {
     constructor(options = {}) {
         var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q;
-        this.events = new eventemitter3.EventEmitter();
+        this.events = new EventEmitter();
         this.hasConnection = false;
         this.abortController = new AbortController();
         /**
@@ -6471,7 +6450,7 @@ class GolemNetwork {
             const EXPIRATION_BUFFER_MINUTES = 15;
             return this.payment.createAllocation({
                 budget,
-                expirationSec: order.market.rentHours * (60 + EXPIRATION_BUFFER_MINUTES) * 60,
+                expirationSec: Math.round(order.market.rentHours * (60 + EXPIRATION_BUFFER_MINUTES) * 60),
             });
         }
         if (typeof order.payment.allocation === "string") {
@@ -6550,7 +6529,7 @@ class GolemNetwork {
             });
             proposalSubscription = proposalPool.readFrom(draftProposal$);
             const agreement = await this.market.signAgreementFromPool(proposalPool, {
-                expirationSec: order.market.rentHours * 60 * 60,
+                expirationSec: Math.round(order.market.rentHours * 60 * 60),
             }, signal);
             networkNode = order.network
                 ? await this.network.createNetworkNode(order.network, agreement.provider.id)
@@ -6661,7 +6640,7 @@ class GolemNetwork {
                 filter: order.market.offerProposalFilter,
             });
             subscription = proposalPool.readFrom(draftProposal$);
-            const rentSeconds = order.market.rentHours * 60 * 60;
+            const rentSeconds = Math.round(order.market.rentHours * 60 * 60);
             resourceRentalPool = this.rental.createResourceRentalPool(proposalPool, allocation, {
                 poolSize,
                 network: order.network,
@@ -6763,72 +6742,5 @@ class GolemNetwork {
     }
 }
 
-exports.Activity = Activity;
-exports.ActivityModuleImpl = ActivityModuleImpl;
-exports.Agreement = Agreement;
-exports.Allocation = Allocation;
-exports.BasicDemandDirector = BasicDemandDirector;
-exports.Batch = Batch;
-exports.DebitNote = DebitNote;
-exports.DebitNoteRepository = DebitNoteRepository;
-exports.Demand = Demand;
-exports.DemandSpecification = DemandSpecification;
-exports.DraftOfferProposalPool = DraftOfferProposalPool;
-exports.EventReader = EventReader;
-exports.ExeUnit = ExeUnit;
-exports.ExecutionConfig = ExecutionConfig;
-exports.GftpStorageProvider = GftpStorageProvider;
-exports.GolemAbortError = GolemAbortError;
-exports.GolemConfigError = GolemConfigError;
-exports.GolemError = GolemError;
-exports.GolemInternalError = GolemInternalError;
-exports.GolemMarketError = GolemMarketError;
-exports.GolemModuleError = GolemModuleError;
-exports.GolemNetwork = GolemNetwork;
-exports.GolemNetworkError = GolemNetworkError;
-exports.GolemPaymentError = GolemPaymentError;
-exports.GolemPlatformError = GolemPlatformError;
-exports.GolemTimeoutError = GolemTimeoutError;
-exports.GolemUserError = GolemUserError;
-exports.GolemWorkError = GolemWorkError;
-exports.Invoice = Invoice;
-exports.InvoiceProcessor = InvoiceProcessor;
-exports.InvoiceRepository = InvoiceRepository;
-exports.MIN_SUPPORTED_YAGNA = MIN_SUPPORTED_YAGNA;
-exports.MarketApiAdapter = MarketApiAdapter;
-exports.MarketModuleImpl = MarketModuleImpl;
-exports.Network = Network;
-exports.NetworkModuleImpl = NetworkModuleImpl;
-exports.NetworkNode = NetworkNode;
-exports.NullStorageProvider = NullStorageProvider;
-exports.OfferProposal = OfferProposal;
-exports.PaymentApiAdapter = PaymentApiAdapter;
-exports.PaymentDemandDirector = PaymentDemandDirector;
-exports.PaymentModuleImpl = PaymentModuleImpl;
-exports.RemoteProcess = RemoteProcess;
-exports.RentalModuleImpl = RentalModuleImpl;
-exports.ResourceRental = ResourceRental;
-exports.ResourceRentalPool = ResourceRentalPool;
-exports.Result = Result;
-exports.ScanDirector = ScanDirector;
-exports.ScannedOffer = ScannedOffer;
-exports.TcpProxy = TcpProxy;
-exports.WebSocketStorageProvider = WebSocketStorageProvider;
-exports.WorkloadDemandDirector = WorkloadDemandDirector;
-exports.YagnaApi = YagnaApi;
-exports.anyAbortSignal = anyAbortSignal;
-exports.checkAndThrowUnsupportedInBrowserError = checkAndThrowUnsupportedInBrowserError;
-exports.createAbortSignalFromTimeout = createAbortSignalFromTimeout;
-exports.defaultLogger = defaultLogger;
-exports.env = env;
-exports.getPaymentNetwork = getPaymentNetwork;
-exports.isBrowser = isBrowser;
-exports.isNode = isNode;
-exports.isWebWorker = isWebWorker;
-exports.mergeUntilFirstComplete = mergeUntilFirstComplete;
-exports.nullLogger = nullLogger;
-exports.runOnNextEventLoopIteration = runOnNextEventLoopIteration;
-exports.sleep = sleep;
-exports.waitAndCall = waitAndCall;
-exports.waitFor = waitFor;
-//# sourceMappingURL=shared-BJbCK2GJ.js.map
+export { defaultLogger as $, Agreement as A, BasicDemandDirector as B, Batch as C, Demand as D, ExecutionConfig as E, RemoteProcess as F, GolemInternalError as G, GolemWorkError as H, Invoice as I, WorkErrorCode as J, GolemError as K, GolemUserError as L, MarketErrorCode as M, NetworkState as N, OfferProposal as O, PaymentDemandDirector as P, GolemAbortError as Q, ResourceRental as R, ScanDirector as S, TcpProxy as T, GolemConfigError as U, GolemPlatformError as V, WebSocketStorageProvider as W, GolemTimeoutError as X, GolemModuleError as Y, sleep as Z, nullLogger as _, GolemNetwork as a, env as a0, YagnaApi as a1, isBrowser as a2, isNode as a3, isWebWorker as a4, checkAndThrowUnsupportedInBrowserError as a5, createAbortSignalFromTimeout as a6, anyAbortSignal as a7, runOnNextEventLoopIteration as a8, mergeUntilFirstComplete as a9, waitFor as aa, waitAndCall as ab, PaymentApiAdapter as ac, MarketApiAdapter as ad, InvoiceRepository as ae, DebitNoteRepository as af, MIN_SUPPORTED_YAGNA as ag, EventReader as ah, GftpStorageProvider as ai, NullStorageProvider as aj, getPaymentNetwork as ak, ResourceRentalPool as b, RentalModuleImpl as c, DemandSpecification as d, GolemMarketError as e, WorkloadDemandDirector as f, DraftOfferProposalPool as g, MarketModuleImpl as h, ScannedOffer as i, DebitNote as j, Allocation as k, RejectionReason as l, GolemPaymentError as m, PaymentErrorCode as n, InvoiceProcessor as o, PaymentModuleImpl as p, Network as q, NetworkNode as r, NetworkModuleImpl as s, NetworkErrorCode as t, GolemNetworkError as u, Activity as v, ActivityStateEnum as w, Result as x, ActivityModuleImpl as y, ExeUnit as z };
+//# sourceMappingURL=shared-DpcN2PRJ.mjs.map

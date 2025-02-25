@@ -1,5 +1,5 @@
 import { EventEmitter } from 'eventemitter3';
-import { L as GolemUserError, Q as GolemAbortError, a as GolemNetwork, $ as defaultLogger, Y as GolemModuleError, _ as nullLogger, ak as getPaymentNetwork, U as GolemConfigError, g as DraftOfferProposalPool } from './shared-C7y-7pMs.mjs';
+import { L as GolemUserError, Q as GolemAbortError, a as GolemNetwork, $ as defaultLogger, Y as GolemModuleError, _ as nullLogger, ak as getPaymentNetwork, U as GolemConfigError, g as DraftOfferProposalPool } from './shared-DpcN2PRJ.mjs';
 import { v4 } from 'uuid';
 import 'ya-ts-client';
 import 'semver/functions/satisfies.js';
@@ -670,7 +670,7 @@ class Deployment {
         }
         // Allocation is re-used for all demands so the expiration date should
         // be the equal to the longest expiration date of all demands
-        const longestExpiration = Math.max(...this.components.resourceRentalPools.map((pool) => pool.options.market.rentHours)) * 3600;
+        const longestExpiration = Math.round(Math.max(...this.components.resourceRentalPools.map((pool) => pool.options.market.rentHours)) * 3600);
         const totalBudget = this.components.resourceRentalPools.reduce((acc, pool) => {
             var _a, _b;
             const replicas = pool.options.deployment.replicas;
@@ -709,7 +709,7 @@ class Deployment {
                     payment: (_f = pool.options) === null || _f === void 0 ? void 0 : _f.payment,
                 },
                 agreementOptions: {
-                    expirationSec: pool.options.market.rentHours * 3600,
+                    expirationSec: Math.round(pool.options.market.rentHours * 3600),
                 },
             });
             this.pools.set(pool.name, {

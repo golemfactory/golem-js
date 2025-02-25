@@ -55,7 +55,9 @@ export class WorkloadDemandDirectorConfig extends BaseConfig {
     }
 
     if (!this.isPositiveInt(this.expirationSec)) {
-      throw new GolemConfigError(`The expirationSec param has to be a positive integer, received: ${this.expirationSec}`);
+      throw new GolemConfigError(
+        `The expirationSec param has to be a positive integer, received: ${this.expirationSec}`,
+      );
     }
 
     if (options.engine && options.runtime) {

@@ -128,8 +128,9 @@ export class Deployment {
 
     // Allocation is re-used for all demands so the expiration date should
     // be the equal to the longest expiration date of all demands
-    const longestExpiration =
-      Math.max(...this.components.resourceRentalPools.map((pool) => pool.options.market.rentHours)) * 3600;
+    const longestExpiration = Math.round(
+      Math.max(...this.components.resourceRentalPools.map((pool) => pool.options.market.rentHours)) * 3600,
+    );
 
     const totalBudget = this.components.resourceRentalPools.reduce((acc, pool) => {
       const replicas = pool.options.deployment.replicas;
@@ -181,7 +182,7 @@ export class Deployment {
           payment: pool.options?.payment,
         },
         agreementOptions: {
-          expirationSec: pool.options.market.rentHours * 3600,
+          expirationSec: Math.round(pool.options.market.rentHours * 3600),
         },
       });
       this.pools.set(pool.name, {
