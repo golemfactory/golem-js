@@ -1,6 +1,6 @@
 'use strict';
 
-var golemNetwork = require('./shared-BWrpTJfx.js');
+var golemNetwork = require('./shared-BJbCK2GJ.js');
 var Decimal = require('decimal.js-light');
 require('debug');
 require('ya-ts-client');

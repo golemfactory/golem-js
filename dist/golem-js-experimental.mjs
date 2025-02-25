@@ -1,5 +1,5 @@
 import { EventEmitter } from 'eventemitter3';
-import { L as GolemUserError, Q as GolemAbortError, a as GolemNetwork, $ as defaultLogger, Y as GolemModuleError, _ as nullLogger, ak as getPaymentNetwork, U as GolemConfigError, g as DraftOfferProposalPool } from './shared-CbTVbSAr.mjs';
+import { L as GolemUserError, Q as GolemAbortError, a as GolemNetwork, $ as defaultLogger, Y as GolemModuleError, _ as nullLogger, ak as getPaymentNetwork, U as GolemConfigError, g as DraftOfferProposalPool } from './shared-C7y-7pMs.mjs';
 import { v4 } from 'uuid';
 import 'ya-ts-client';
 import 'semver/functions/satisfies.js';
