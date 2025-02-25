@@ -409,7 +409,7 @@ export class GolemNetwork {
 
       return this.payment.createAllocation({
         budget,
-        expirationSec: order.market.rentHours * (60 + EXPIRATION_BUFFER_MINUTES) * 60,
+        expirationSec: Math.round(order.market.rentHours * (60 + EXPIRATION_BUFFER_MINUTES) * 60),
       });
     }
 
@@ -503,7 +503,7 @@ export class GolemNetwork {
       const agreement = await this.market.signAgreementFromPool(
         proposalPool,
         {
-          expirationSec: order.market.rentHours * 60 * 60,
+          expirationSec: Math.round(order.market.rentHours * 60 * 60),
         },
         signal,
       );
@@ -626,7 +626,7 @@ export class GolemNetwork {
       });
       subscription = proposalPool.readFrom(draftProposal$);
 
-      const rentSeconds = order.market.rentHours * 60 * 60;
+      const rentSeconds = Math.round(order.market.rentHours * 60 * 60);
 
       resourceRentalPool = this.rental.createResourceRentalPool(proposalPool, allocation, {
         poolSize,
