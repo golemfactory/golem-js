@@ -132,8 +132,9 @@ export class ExeUnit {
       state = await this.fetchState();
 
       if (state !== ActivityStateEnum.Ready) {
+        const currentDateTime = new Date().toISOString();
         throw new GolemWorkError(
-          `Activity ${this.activity.id} cannot reach the Ready state. Current state: ${state}`,
+          `Activity ${this.activity.id} cannot reach the Ready state at: ${currentDateTime}. Current state: ${state}`,
           WorkErrorCode.ActivityDeploymentFailed,
           this.activity.agreement,
           this.activity,
