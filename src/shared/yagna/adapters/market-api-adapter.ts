@@ -25,7 +25,7 @@ import { ScanSpecification, ScannedOffer } from "../../../market/scan";
 /**
  * A bit more user-friendly type definition of DemandOfferBaseDTO from ya-ts-client
  *
- * That's probably one of the most confusing elements around Golem Protocol and the API specificiation:
+ * That's probably one of the most confusing elements around Golem Protocol and the API specification:
  *
  * - Providers create Offers
  * - Requestors create Demands
