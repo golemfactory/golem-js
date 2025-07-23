@@ -72,12 +72,36 @@ export class AgreementPaymentProcess {
     const invoiceSubscription = this.paymentModule
       .observeInvoices()
       .pipe(filter((invoice) => invoice.agreementId === this.agreement.id))
-      .subscribe((invoice) => this.addInvoice(invoice));
+      .subscribe({
+        next: async (invoice) => {
+          try {
+            await this.addInvoice(invoice);
+          } catch (error) {
+            this.logger.error(`Error processing invoice`, error);
+          }
+        },
+        error: (error) => {
+          this.logger.error(`Invoice subscription error`, error);
+          this.stop();
+        },
+      });
 
     const debitNoteSubscription = this.paymentModule
       .observeDebitNotes()
       .pipe(filter((debitNote) => debitNote.agreementId === this.agreement.id))
-      .subscribe((debitNote) => this.addDebitNote(debitNote));
+      .subscribe({
+        next: async (debitNote) => {
+          try {
+            await this.addDebitNote(debitNote);
+          } catch (error) {
+            this.logger.error(`Error processing debit note`, error);
+          }
+        },
+        error: (error) => {
+          this.logger.error(`Debit note subscription error`, error);
+          this.stop();
+        },
+      });
 
     this.cleanupSubscriptions = () => {
       invoiceSubscription.unsubscribe();
