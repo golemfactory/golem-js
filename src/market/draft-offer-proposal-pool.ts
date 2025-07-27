@@ -5,7 +5,7 @@ import { createAbortSignalFromTimeout, defaultLogger, Logger, runOnNextEventLoop
 import { Observable, Subscription } from "rxjs";
 import { AcquireQueue } from "../shared/utils/acquireQueue";
 
-export type OfferProposalSelector = (proposals: OfferProposal[]) => OfferProposal;
+export type OfferProposalSelector = (proposals: OfferProposal[]) => OfferProposal | null;
 
 export interface ProposalPoolOptions {
   /**
@@ -121,6 +121,7 @@ export class DraftOfferProposalPool {
     const tryGettingFromAvailable = async (): Promise<OfferProposal | undefined> => {
       signal.throwIfAborted();
 
+      console.log("AAAAAAAAAAAAAAAAA Draft proposal pool acquiring ...");
       const proposal = this.available.size > 0 ? this.selectOfferProposal([...this.available]) : null;
       if (!proposal) {
         // No proposal was selected, either `available` is empty or the user's proposal filter didn't select anything
