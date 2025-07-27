@@ -1,13 +1,12 @@
 import { Agreement, MarketModule } from "../market";
 import { AgreementPaymentProcess, PaymentProcessOptions } from "../payment/agreement_payment_process";
 import { createAbortSignalFromTimeout, Logger } from "../shared/utils";
-import { waitFor } from "../shared/utils/wait";
 import { Activity, ActivityModule, ExeUnit, ExeUnitOptions } from "../activity";
 import { StorageProvider } from "../shared/storage";
 import { EventEmitter } from "eventemitter3";
 import { NetworkNode } from "../network";
 import { ExecutionOptions } from "../activity/exe-script-executor";
-import { GolemAbortError, GolemTimeoutError, GolemUserError } from "../shared/error/golem-error";
+import { GolemUserError } from "../shared/error/golem-error";
 
 export interface ResourceRentalEvents {
   /** Emitted when the rental process is fully finalized */
@@ -59,6 +58,7 @@ export class ResourceRental {
     // TODO: Listen to agreement events to know when it goes down due to provider closing it!
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private async startStopAndFinalize(signalOrTimeout?: number | AbortSignal) {
     try {
       if (this.currentExeUnit) {
@@ -71,25 +71,6 @@ export class ResourceRental {
       if ((await this.fetchAgreementState()) !== "Terminated") {
         await this.marketModule.terminateAgreement(this.agreement);
       }
-      if (this.paymentProcess.isFinished()) {
-        return;
-      }
-
-      this.logger.info("Waiting for payment process of agreement to finish", { agreementId: this.agreement.id });
-      const abortSignal = createAbortSignalFromTimeout(signalOrTimeout);
-      await waitFor(() => this.paymentProcess.isFinished(), {
-        abortSignal: abortSignal,
-      }).catch((error) => {
-        this.paymentProcess.stop();
-        if (error instanceof GolemTimeoutError) {
-          throw new GolemTimeoutError(
-            `The finalization of payment process has been aborted due to a timeout`,
-            abortSignal.reason,
-          );
-        }
-        throw new GolemAbortError("The finalization of payment process has been aborted", abortSignal.reason);
-      });
-      this.logger.info("Finalized payment process", { agreementId: this.agreement.id });
     } catch (error) {
       this.logger.error("Filed to finalize payment process", { agreementId: this.agreement.id, error });
       throw error;
