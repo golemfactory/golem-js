@@ -1,7 +1,7 @@
 'use strict';
 
 var eventemitter3 = require('eventemitter3');
-var golemNetwork = require('./shared-D7tbu-bd.js');
+var golemNetwork = require('./shared-BWBDqqWH.js');
 var uuid = require('uuid');
 require('ya-ts-client');
 require('semver/functions/satisfies.js');
