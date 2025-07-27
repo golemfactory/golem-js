@@ -2,7 +2,7 @@ import { OfferProposal, OfferProposalFilter } from "./proposal";
 import { EventEmitter } from "eventemitter3";
 import { Logger } from "../shared/utils";
 import { Observable, Subscription } from "rxjs";
-export type OfferProposalSelector = (proposals: OfferProposal[]) => OfferProposal;
+export type OfferProposalSelector = (proposals: OfferProposal[]) => OfferProposal | null;
 export interface ProposalPoolOptions {
     /**
      * A user-defined function that will be used by {@link DraftOfferProposalPool.acquire} to pick the best fitting offer proposal from available ones

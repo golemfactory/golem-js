@@ -5,7 +5,7 @@ import { createAbortSignalFromTimeout, defaultLogger, Logger, runOnNextEventLoop
 import { Observable, Subscription } from "rxjs";
 import { AcquireQueue } from "../shared/utils/acquireQueue";
 
-export type OfferProposalSelector = (proposals: OfferProposal[]) => OfferProposal;
+export type OfferProposalSelector = (proposals: OfferProposal[]) => OfferProposal | null;
 
 export interface ProposalPoolOptions {
   /**
