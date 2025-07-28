@@ -48,6 +48,10 @@ export interface ProposalPoolEvents {
  * parties.
  *
  * Technically, the "market" part of you application should populate this pool with such offer proposals.
+ *
+ * It's important to know that offers are never automatically removed from the pool, even if the corresponding
+ * Demand becomes expired. It's on the application developer to ensure that a proposal is still valid before
+ * trying to sign an agreement.
  */
 export class DraftOfferProposalPool {
   public readonly events = new EventEmitter<ProposalPoolEvents>();
@@ -68,6 +72,13 @@ export class DraftOfferProposalPool {
    * The proposals that were not yet leased to anyone and are available for lease
    */
   private available = new Set<OfferProposal>();
+
+  /**
+   * Returns a read-only copy of all draft offers currently in the pool
+   */
+  public getAvailable(): Array<OfferProposal> {
+    return [...this.available];
+  }
 
   /**
    * The proposal that were already leased to someone and shouldn't be leased again
