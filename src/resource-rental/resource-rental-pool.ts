@@ -126,6 +126,10 @@ export class ResourceRentalPool {
     this.abortController = new AbortController();
   }
 
+  public getProposalPool(): DraftOfferProposalPool {
+    return this.proposalPool;
+  }
+
   private async createNewResourceRental(signalOrTimeout?: number | AbortSignal) {
     this.logger.debug("Creating new resource rental to add to pool");
     const { signal, cleanup } = anyAbortSignal(
