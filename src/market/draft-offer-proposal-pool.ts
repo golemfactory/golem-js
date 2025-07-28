@@ -132,7 +132,14 @@ export class DraftOfferProposalPool {
     const tryGettingFromAvailable = async (): Promise<OfferProposal | undefined> => {
       signal.throwIfAborted();
 
-      const proposal = this.available.size > 0 ? this.selectOfferProposal([...this.available]) : null;
+      let proposal: OfferProposal | null = null;
+      if (this.available.size > 0) {
+        try {
+          proposal = this.selectOfferProposal(this.getAvailable());
+        } catch (e) {
+          this.logger.error("Error in user-defined offer proposal selector", { error: e });
+        }
+      }
       if (!proposal) {
         // No proposal was selected, either `available` is empty or the user's proposal filter didn't select anything
         // no point retrying
