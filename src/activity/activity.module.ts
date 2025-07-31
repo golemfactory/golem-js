@@ -16,14 +16,14 @@ export interface ActivityModule {
    *
    * @return The resulting activity on the provider for further use
    */
-  createActivity(agreement: Agreement): Promise<Activity>;
+  createActivity(agreement: Agreement, signalOrTimeout?: AbortSignal | number): Promise<Activity>;
 
   /**
    * Definitely terminate any work on the provider
    *
    * @return The activity that was permanently terminated
    */
-  destroyActivity(activity: Activity): Promise<Activity>;
+  destroyActivity(activity: Activity, signalOrTimeout?: AbortSignal | number): Promise<Activity>;
 
   /**
    * Fetches the latest state of the activity. It's recommended to use this method
@@ -214,13 +214,13 @@ export class ActivityModuleImpl implements ActivityModule {
     );
   }
 
-  async createActivity(agreement: Agreement): Promise<Activity> {
+  async createActivity(agreement: Agreement, signalOrTimeout?: AbortSignal | number): Promise<Activity> {
     this.logger.debug("Creating activity", {
       agreementId: agreement.id,
       provider: agreement.provider,
     });
     try {
-      const activity = await this.activityApi.createActivity(agreement);
+      const activity = await this.activityApi.createActivity(agreement, signalOrTimeout);
       this.events.emit("activityCreated", { activity });
       this.logger.info("Created activity", {
         activityId: activity.id,
@@ -234,10 +234,10 @@ export class ActivityModuleImpl implements ActivityModule {
     }
   }
 
-  async destroyActivity(activity: Activity): Promise<Activity> {
+  async destroyActivity(activity: Activity, signalOrTimeout?: AbortSignal | number): Promise<Activity> {
     this.logger.debug("Destroying activity", activity);
     try {
-      const updated = await this.activityApi.destroyActivity(activity);
+      const updated = await this.activityApi.destroyActivity(activity, signalOrTimeout);
       this.events.emit("activityDestroyed", {
         activity: updated,
       });

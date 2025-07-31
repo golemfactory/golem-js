@@ -27,7 +27,7 @@ beforeEach(() => {
   reset(mockLogger);
   reset(mockResourceRentalOptions);
   when(mockActivityModule.createExeUnit(_, _)).thenResolve(instance(mockExeUnit));
-  when(mockMarketModule.fetchAgreement(_)).thenResolve(instance(mockAgreement));
+  when(mockMarketModule.fetchAgreement(_, _)).thenResolve(instance(mockAgreement));
   resourceRental = new ResourceRental(
     instance(mockAgreement),
     instance(mockStorageProvider),

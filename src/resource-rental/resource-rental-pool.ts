@@ -141,7 +141,7 @@ export class ResourceRentalPool {
       this.rentalsBeingSigned++;
       const agreement = await this.marketModule.signAgreementFromPool(this.proposalPool, this.agreementOptions, signal);
       const networkNode = this.network
-        ? await this.networkModule.createNetworkNode(this.network, agreement.provider.id)
+        ? await this.networkModule.createNetworkNode(this.network, agreement.provider.id, undefined, signal)
         : undefined;
       const resourceRental = this.rentalModule.createResourceRental(agreement, this.allocation, {
         networkNode,
@@ -169,9 +169,9 @@ export class ResourceRentalPool {
     }
   }
 
-  private async validate(resourceRental: ResourceRental) {
+  private async validate(resourceRental: ResourceRental, signalOrTimeout?: number | AbortSignal) {
     try {
-      const state = await resourceRental.fetchAgreementState();
+      const state = await resourceRental.fetchAgreementState(signalOrTimeout);
       const result = state === "Approved";
       this.logger.debug("Validated resource rental in the pool", { result, state });
       return result;
@@ -189,7 +189,7 @@ export class ResourceRentalPool {
    * Take the first valid resource rental from the pool
    * If there is no valid resource rental, return null
    */
-  private async takeValidResourceRental(): Promise<ResourceRental | null> {
+  private async takeValidResourceRental(signalOrTimeout?: number | AbortSignal): Promise<ResourceRental | null> {
     let resourceRental: ResourceRental | null = null;
     if (this.highPriority.size > 0) {
       resourceRental = this.highPriority.values().next().value as ResourceRental;
@@ -201,10 +201,10 @@ export class ResourceRentalPool {
     if (!resourceRental) {
       return null;
     }
-    const isValid = await this.validate(resourceRental);
+    const isValid = await this.validate(resourceRental, signalOrTimeout);
     if (!isValid) {
-      await this.destroy(resourceRental);
-      return this.takeValidResourceRental();
+      await this.destroy(resourceRental, signalOrTimeout);
+      return this.takeValidResourceRental(signalOrTimeout);
     }
     return resourceRental;
   }
@@ -257,7 +257,7 @@ export class ResourceRentalPool {
       throw new GolemAbortError("The pool is in draining mode, you cannot acquire new resources");
     }
 
-    let resourceRental = await this.takeValidResourceRental();
+    let resourceRental = await this.takeValidResourceRental(signalOrTimeout);
 
     if (!resourceRental) {
       if (!this.canCreateMoreResourceRentals()) {
@@ -290,15 +290,15 @@ export class ResourceRentalPool {
     }
   }
 
-  async release(resourceRental: ResourceRental): Promise<void> {
+  async release(resourceRental: ResourceRental, signalOrTimeout?: number | AbortSignal): Promise<void> {
     return this.asyncLock.acquire("resource-rental-pool", async () => {
       if (this.getAvailableSize() >= this.maxPoolSize) {
-        return this.destroy(resourceRental);
+        return this.destroy(resourceRental, signalOrTimeout);
       }
       this.borrowed.delete(resourceRental);
-      const isValid = await this.validate(resourceRental);
+      const isValid = await this.validate(resourceRental, signalOrTimeout);
       if (!isValid) {
-        return this.destroy(resourceRental);
+        return this.destroy(resourceRental, signalOrTimeout);
       }
       this.passResourceRentalToWaitingAcquireOrBackToPool(resourceRental);
       this.events.emit("released", {
@@ -307,11 +307,22 @@ export class ResourceRentalPool {
     });
   }
 
-  async destroy(resourceRental: ResourceRental): Promise<void> {
+  /**
+   * Destroy a resource rental and prevent it from going back to the pool. This method will try to finalize the rental
+   * gently by closing all it's underlying resources and waiting for the payment process to finish. You may provide a
+   * timeout, or an AbortSignal that will be used to cancel the finalization process. This may be needed if the provider
+   * becomes offline - in that case an invoice may never arrive so this method would hang indefinitely.
+   * @param resourceRental - rental acquired from this pool
+   * @param signalOrTimeout - the timeout in milliseconds or an AbortSignal
+   */
+  async destroy(resourceRental: ResourceRental, signalOrTimeout?: number | AbortSignal): Promise<void> {
     try {
       this.borrowed.delete(resourceRental);
       this.logger.debug("Destroying resource rental from the pool", { agreementId: resourceRental.agreement.id });
-      await Promise.all([resourceRental.stopAndFinalize(), this.removeNetworkNode(resourceRental)]);
+      await Promise.all([
+        resourceRental.stopAndFinalize(signalOrTimeout),
+        this.removeNetworkNode(resourceRental, signalOrTimeout),
+      ]);
       this.events.emit("destroyed", {
         agreement: resourceRental.agreement,
       });
@@ -332,7 +343,7 @@ export class ResourceRentalPool {
     return !!this.drainPromise;
   }
 
-  private async startDrain() {
+  private async startDrain(signalOrTimeout?: AbortSignal | number) {
     try {
       await this.asyncLock.acquire("resource-rental-pool", async () => {
         this.abortController.abort("The pool is in draining mode");
@@ -341,7 +352,9 @@ export class ResourceRentalPool {
         const allResourceRentals = Array.from(this.borrowed)
           .concat(Array.from(this.lowPriority))
           .concat(Array.from(this.highPriority));
-        await Promise.allSettled(allResourceRentals.map((resourceRental) => this.destroy(resourceRental)));
+        await Promise.allSettled(
+          allResourceRentals.map((resourceRental) => this.destroy(resourceRental, signalOrTimeout)),
+        );
         this.lowPriority.clear();
         this.highPriority.clear();
         this.borrowed.clear();
@@ -362,11 +375,11 @@ export class ResourceRentalPool {
    *
    * @return Resolves when all agreements are terminated
    */
-  async drainAndClear() {
+  async drainAndClear(signalOrTimeout?: number | AbortSignal) {
     if (this.isDraining) {
       return this.drainPromise;
     }
-    this.drainPromise = this.startDrain().finally(() => {
+    this.drainPromise = this.startDrain(signalOrTimeout).finally(() => {
       this.drainPromise = undefined;
     });
     return this.drainPromise;
@@ -444,13 +457,13 @@ export class ResourceRentalPool {
     this.events.emit("ready");
   }
 
-  private async removeNetworkNode(resourceRental: ResourceRental) {
+  private async removeNetworkNode(resourceRental: ResourceRental, signalOrTimeout?: AbortSignal | number) {
     if (this.network && resourceRental.networkNode) {
       this.logger.debug("Removing a node from the network", {
         network: this.network.getNetworkInfo().ip,
         nodeIp: resourceRental.networkNode.ip,
       });
-      await this.networkModule.removeNetworkNode(this.network, resourceRental.networkNode);
+      await this.networkModule.removeNetworkNode(this.network, resourceRental.networkNode, signalOrTimeout);
     }
   }
 
@@ -466,7 +479,7 @@ export class ResourceRentalPool {
    * });
    * ```
    * @param callback - a function that takes a `rental` object as its argument. The rental is automatically released after the callback is executed, regardless of whether it completes successfully or throws an error.
-   * @param signalOrTimeout - the timeout in milliseconds or an AbortSignal that will be used to cancel the rental request
+   * @param signalOrTimeout - the timeout in milliseconds or an AbortSignal that will be used to cancel the rental request or cleanup
    */
   public async withRental<T>(
     callback: (rental: ResourceRental) => Promise<T>,
@@ -476,7 +489,7 @@ export class ResourceRentalPool {
     try {
       return await callback(rental);
     } finally {
-      await this.release(rental);
+      await this.release(rental, signalOrTimeout);
     }
   }
 }

@@ -25,7 +25,7 @@ export interface AgreementOptions {
 }
 
 export interface IAgreementRepository {
-  getById(id: string): Promise<Agreement>;
+  getById(id: string, signalOrTimeout?: AbortSignal | number): Promise<Agreement>;
 }
 
 /**

@@ -1,13 +1,21 @@
 import { YagnaApi } from "../yagnaApi";
 import { GolemNetworkError, INetworkApi, Network, NetworkErrorCode, NetworkNode } from "../../../network";
 import { getMessageFromApiError } from "../../utils/apiErrorMessage";
+import { cancelYagnaApiCall } from "../../utils/cancel";
+import { createAbortSignalFromTimeout } from "../../utils";
 
 export class NetworkApiAdapter implements INetworkApi {
   constructor(private readonly yagnaApi: YagnaApi) {}
 
-  async createNetwork(options: { ip: string; mask?: string; gateway?: string }): Promise<Network> {
+  async createNetwork(
+    options: { ip: string; mask?: string; gateway?: string },
+    signalOrTimeout?: AbortSignal | number,
+  ): Promise<Network> {
     try {
-      const { id, ip, mask, gateway } = await this.yagnaApi.net.createNetwork(options);
+      const { id, ip, mask, gateway } = await cancelYagnaApiCall(
+        this.yagnaApi.net.createNetwork(options),
+        createAbortSignalFromTimeout(signalOrTimeout),
+      );
       return new Network(id, ip, mask, gateway);
     } catch (error) {
       const message = getMessageFromApiError(error);
@@ -19,9 +27,12 @@ export class NetworkApiAdapter implements INetworkApi {
       );
     }
   }
-  async removeNetwork(network: Network): Promise<void> {
+  async removeNetwork(network: Network, signalOrTimeout?: AbortSignal | number): Promise<void> {
     try {
-      await this.yagnaApi.net.removeNetwork(network.id);
+      await cancelYagnaApiCall(
+        this.yagnaApi.net.removeNetwork(network.id),
+        createAbortSignalFromTimeout(signalOrTimeout),
+      );
     } catch (error) {
       const message = getMessageFromApiError(error);
       throw new GolemNetworkError(
@@ -32,9 +43,17 @@ export class NetworkApiAdapter implements INetworkApi {
       );
     }
   }
-  async createNetworkNode(network: Network, nodeId: string, nodeIp: string): Promise<NetworkNode> {
+  async createNetworkNode(
+    network: Network,
+    nodeId: string,
+    nodeIp: string,
+    signalOrTimeout?: AbortSignal | number,
+  ): Promise<NetworkNode> {
     try {
-      await this.yagnaApi.net.addNode(network.id, { id: nodeId, ip: nodeIp });
+      await cancelYagnaApiCall(
+        this.yagnaApi.net.addNode(network.id, { id: nodeId, ip: nodeIp }),
+        createAbortSignalFromTimeout(signalOrTimeout),
+      );
       const networkNode = new NetworkNode(
         nodeId,
         nodeIp,
@@ -53,9 +72,12 @@ export class NetworkApiAdapter implements INetworkApi {
       );
     }
   }
-  async removeNetworkNode(network: Network, node: NetworkNode): Promise<void> {
+  async removeNetworkNode(network: Network, node: NetworkNode, signalOrTimeout?: AbortSignal | number): Promise<void> {
     try {
-      await this.yagnaApi.net.removeNode(network.id, node.id);
+      await cancelYagnaApiCall(
+        this.yagnaApi.net.removeNode(network.id, node.id),
+        createAbortSignalFromTimeout(signalOrTimeout),
+      );
     } catch (error) {
       const message = getMessageFromApiError(error);
       throw new GolemNetworkError(
@@ -67,9 +89,12 @@ export class NetworkApiAdapter implements INetworkApi {
     }
   }
 
-  async getIdentity() {
+  async getIdentity(signalOrTimeout?: AbortSignal | number) {
     try {
-      return await this.yagnaApi.identity.getIdentity().then((res) => res.identity);
+      return await cancelYagnaApiCall(
+        this.yagnaApi.identity.getIdentity(),
+        createAbortSignalFromTimeout(signalOrTimeout),
+      ).then((res) => res.identity);
     } catch (error) {
       const message = getMessageFromApiError(error);
       throw new GolemNetworkError(

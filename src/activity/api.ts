@@ -34,9 +34,9 @@ export type ActivityEvents = {
 export interface IActivityApi {
   getActivity(id: string): Promise<Activity>;
 
-  createActivity(agreement: Agreement): Promise<Activity>;
+  createActivity(agreement: Agreement, signalOrTimeout?: AbortSignal | number): Promise<Activity>;
 
-  destroyActivity(activity: Activity): Promise<Activity>;
+  destroyActivity(activity: Activity, signalOrTimeout?: AbortSignal | number): Promise<Activity>;
 
   getActivityState(id: string): Promise<ActivityStateEnum>;
 
