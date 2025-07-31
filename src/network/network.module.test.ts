@@ -24,7 +24,7 @@ describe("Network", () => {
       networkApi: instance(mockNetworkApi),
       logger: instance(imock<Logger>()),
     });
-    when(mockNetworkApi.createNetwork(anything())).thenResolve(instance(mockNetwork));
+    when(mockNetworkApi.createNetwork(anything(), anything())).thenResolve(instance(mockNetwork));
     when(mockNetwork.getNetworkInfo()).thenReturn({
       id: "test-id-1",
       ip: "192.168.0.0",
@@ -188,13 +188,13 @@ describe("Network", () => {
     it("should remove network", async () => {
       const network = instance(mockNetwork);
       await networkModule.removeNetwork(network);
-      verify(mockNetworkApi.removeNetwork(network)).once();
+      verify(mockNetworkApi.removeNetwork(network, anything())).once();
     });
 
     it("should not remove network that doesn't exist", async () => {
       const network = instance(mockNetwork);
       const mockError = new Error("404");
-      when(mockNetworkApi.removeNetwork(network)).thenReject(mockError);
+      when(mockNetworkApi.removeNetwork(network, anything())).thenReject(mockError);
       await expect(networkModule.removeNetwork(network)).rejects.toMatchError(mockError);
     });
   });
