@@ -237,7 +237,7 @@ describe("ResourceRentalPool", () => {
     const rental = await pool.acquire();
     await rental.getExeUnit();
     await expect(rental.stopAndFinalize(10)).rejects.toThrow(
-      new GolemAbortError("The finalization of payment process has been aborted"),
+      new GolemAbortError("The resource rental finalization has been aborted"),
     );
   });
 
@@ -248,7 +248,7 @@ describe("ResourceRentalPool", () => {
     await rental.getExeUnit();
     abortController.abort();
     await expect(rental.stopAndFinalize(abortController.signal)).rejects.toThrow(
-      new GolemAbortError("The finalization of payment process has been aborted"),
+      new GolemAbortError("The resource rental finalization has been aborted"),
     );
   });
 
