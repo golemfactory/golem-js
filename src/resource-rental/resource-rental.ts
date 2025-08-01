@@ -60,10 +60,10 @@ export class ResourceRental {
   }
 
   private async startStopAndFinalize(signalOrTimeout?: number | AbortSignal) {
+    const abortSignal = createAbortSignalFromTimeout(signalOrTimeout);
     try {
-      const abortSignal = createAbortSignalFromTimeout(signalOrTimeout);
       if (abortSignal.aborted) {
-        throw new GolemUserError("The finalization of payment process has been aborted");
+        throw new GolemAbortError("The resource rental finalization has been aborted", abortSignal.reason);
       }
 
       if (this.currentExeUnit) {
@@ -96,6 +96,9 @@ export class ResourceRental {
       this.logger.info("Finalized payment process", { agreementId: this.agreement.id });
     } catch (error) {
       this.logger.error("Filed to finalize payment process", { agreementId: this.agreement.id, error });
+      if (abortSignal.aborted) {
+        throw new GolemAbortError("The resource rental finalization has been aborted", error);
+      }
       throw error;
     } finally {
       this.events.emit("finalized");
