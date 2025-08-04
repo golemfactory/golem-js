@@ -184,14 +184,16 @@ describe("ResourceRentalPool", () => {
       pool["lowPriority"].add(rental1);
       pool["lowPriority"].add(rental2);
 
+      const abortSignal = new AbortController().signal;
+
       expect(pool.getBorrowedSize()).toBe(0);
       expect(pool.getAvailableSize()).toBe(2);
-      const resourceRental = await pool.acquire();
+      const resourceRental = await pool.acquire(abortSignal);
       expect(pool.getBorrowedSize()).toBe(1);
       expect(pool.getAvailableSize()).toBe(0);
       expect(resourceRental).toBe(newlyCreatedRental);
-      expect(pool["destroy"]).toHaveBeenCalledWith(rental1);
-      expect(pool["destroy"]).toHaveBeenCalledWith(rental2);
+      expect(pool["destroy"]).toHaveBeenCalledWith(rental1, abortSignal);
+      expect(pool["destroy"]).toHaveBeenCalledWith(rental2, abortSignal);
     });
     it("should not create more processes than allowed", async () => {
       jest.useFakeTimers();
@@ -263,18 +265,20 @@ describe("ResourceRentalPool", () => {
       pool["lowPriority"].add(rental1);
       pool["lowPriority"].add(rental2);
 
-      const acquiredRental1 = await pool.acquire();
+      const abortSignal = new AbortController().signal;
+
+      const acquiredRental1 = await pool.acquire(abortSignal);
       expect(pool.getBorrowedSize()).toBe(1);
       expect(pool.getAvailableSize()).toBe(1);
 
       pool["lowPriority"].add(rental3);
 
-      await pool.release(acquiredRental1);
+      await pool.release(acquiredRental1, abortSignal);
       expect(pool.getBorrowedSize()).toBe(0);
       expect(pool.getAvailableSize()).toBe(2);
       expect(pool["lowPriority"].has(rental2)).toBe(true);
       expect(pool["lowPriority"].has(rental3)).toBe(true);
-      expect(pool["destroy"]).toHaveBeenCalledWith(rental1);
+      expect(pool["destroy"]).toHaveBeenCalledWith(rental1, abortSignal);
     });
     it("destroys the resource rental if it is invalid", async () => {
       const pool = getRentalPool({ max: 1 });
@@ -283,16 +287,18 @@ describe("ResourceRentalPool", () => {
 
       pool["lowPriority"].add(rental1);
 
-      const acquiredRental1 = await pool.acquire();
+      const abortSignal = new AbortController().signal;
+
+      const acquiredRental1 = await pool.acquire(abortSignal);
       expect(pool.getBorrowedSize()).toBe(1);
       expect(pool.getAvailableSize()).toBe(0);
 
       acquiredRental1.fetchAgreementState = jest.fn().mockResolvedValue("Expired");
 
-      await pool.release(acquiredRental1);
+      await pool.release(acquiredRental1, abortSignal);
       expect(pool.getBorrowedSize()).toBe(0);
       expect(pool.getAvailableSize()).toBe(0);
-      expect(pool["destroy"]).toHaveBeenCalledWith(rental1);
+      expect(pool["destroy"]).toHaveBeenCalledWith(rental1, abortSignal);
     });
   });
   describe("destroy()", () => {
@@ -320,16 +326,17 @@ describe("ResourceRentalPool", () => {
       pool["lowPriority"].add(rental2);
       pool["lowPriority"].add(rental3);
 
-      await pool.acquire();
-      await pool.acquire();
+      const abortSignal = new AbortController().signal;
+      await pool.acquire(abortSignal);
+      await pool.acquire(abortSignal);
       expect(pool.getBorrowedSize()).toBe(2);
       expect(pool.getAvailableSize()).toBe(1);
-      await pool.drainAndClear();
+      await pool.drainAndClear(abortSignal);
       expect(pool.getBorrowedSize()).toBe(0);
       expect(pool.getAvailableSize()).toBe(0);
-      expect(pool["destroy"]).toHaveBeenCalledWith(rental1);
-      expect(pool["destroy"]).toHaveBeenCalledWith(rental2);
-      expect(pool["destroy"]).toHaveBeenCalledWith(rental3);
+      expect(pool["destroy"]).toHaveBeenCalledWith(rental1, abortSignal);
+      expect(pool["destroy"]).toHaveBeenCalledWith(rental2, abortSignal);
+      expect(pool["destroy"]).toHaveBeenCalledWith(rental3, abortSignal);
     });
     it("prevents new rentals from being acquired during the drain", async () => {
       const pool = getRentalPool({ max: 3 });
@@ -345,23 +352,25 @@ describe("ResourceRentalPool", () => {
       pool["lowPriority"].add(rental2);
       pool["lowPriority"].add(rental3);
 
-      await pool.acquire();
-      await pool.acquire();
+      const abortSignal = new AbortController().signal;
+
+      await pool.acquire(abortSignal);
+      await pool.acquire(abortSignal);
       expect(pool.getBorrowedSize()).toBe(2);
       expect(pool.getAvailableSize()).toBe(1);
-      const drainPromise = pool.drainAndClear();
+      const drainPromise = pool.drainAndClear(abortSignal);
       expect(pool.acquire()).rejects.toThrow("The pool is in draining mode");
       await drainPromise;
       expect(pool.getBorrowedSize()).toBe(0);
       expect(pool.getAvailableSize()).toBe(0);
-      expect(pool["destroy"]).toHaveBeenCalledWith(rental1);
-      expect(pool["destroy"]).toHaveBeenCalledWith(rental2);
-      expect(pool["destroy"]).toHaveBeenCalledWith(rental3);
+      expect(pool["destroy"]).toHaveBeenCalledWith(rental1, abortSignal);
+      expect(pool["destroy"]).toHaveBeenCalledWith(rental2, abortSignal);
+      expect(pool["destroy"]).toHaveBeenCalledWith(rental3, abortSignal);
     });
     it("reuses the same promise if called multiple times", async () => {
       const pool = getRentalPool({ max: 3 });
       const poolSpy = spy(pool);
-      when(poolSpy["startDrain"]()).thenResolve();
+      when(poolSpy["startDrain"](_)).thenResolve();
 
       expect(pool["drainPromise"]).toBeUndefined();
       const drainPromise1 = pool.drainAndClear();
@@ -369,7 +378,7 @@ describe("ResourceRentalPool", () => {
       const drainPromise3 = pool.drainAndClear();
       expect(pool["drainPromise"]).toBeDefined();
       await Promise.all([drainPromise1, drainPromise2, drainPromise3]);
-      verify(poolSpy["startDrain"]()).once();
+      verify(poolSpy["startDrain"](_)).once();
       expect(pool["drainPromise"]).toBeUndefined();
     });
     it("stops rentals that are in the process of being signed", async () => {
@@ -435,7 +444,7 @@ describe("ResourceRentalPool", () => {
       expect(pool.getBorrowedSize()).toEqual(0);
       expect(pool.getSize()).toEqual(0);
       verify(poolSpy.release(_)).times(12);
-      verify(poolSpy.destroy(_)).times(maxPoolSize);
+      verify(poolSpy.destroy(_, _)).times(maxPoolSize);
     });
   });
 });

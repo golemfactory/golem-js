@@ -147,15 +147,21 @@ export interface MarketModule {
    * - ya-ts-client "wait for approval"
    *
    * @param proposal
+   * @param signalOrTimeout - The timeout in milliseconds or an AbortSignal that will be used to cancel the operation
    *
    * @return Returns when the provider accepts the agreement, rejects otherwise. The resulting agreement is ready to create activities from.
    */
-  proposeAgreement(proposal: OfferProposal): Promise<Agreement>;
+  proposeAgreement(
+    proposal: OfferProposal,
+    agreementOptions?: AgreementOptions,
+    signalOrTimeout?: AbortSignal | number,
+  ): Promise<Agreement>;
 
   /**
    * @return The Agreement that has been terminated via Yagna
+   * @param signalOrTimeout - The timeout in milliseconds or an AbortSignal that will be used to cancel the operation
    */
-  terminateAgreement(agreement: Agreement, reason?: string): Promise<Agreement>;
+  terminateAgreement(agreement: Agreement, reason?: string, signalOrTimeout?: AbortSignal | number): Promise<Agreement>;
 
   /**
    * Acquire a proposal from the pool and sign an agreement with the provider. If signing the agreement fails,
@@ -210,7 +216,7 @@ export interface MarketModule {
   /**
    * Fetch the most up-to-date agreement details from the yagna
    */
-  fetchAgreement(agreementId: string): Promise<Agreement>;
+  fetchAgreement(agreementId: string, signalOrTimeout?: AbortSignal | number): Promise<Agreement>;
 
   /**
    * Scan the market for offers that match the given demand specification.
@@ -456,8 +462,12 @@ export class MarketModuleImpl implements MarketModule {
     }
   }
 
-  async proposeAgreement(proposal: OfferProposal, options?: AgreementOptions): Promise<Agreement> {
-    const agreement = await this.marketApi.proposeAgreement(proposal, options);
+  async proposeAgreement(
+    proposal: OfferProposal,
+    options?: AgreementOptions,
+    signalOrTimeout?: AbortSignal | number,
+  ): Promise<Agreement> {
+    const agreement = await this.marketApi.proposeAgreement(proposal, options, signalOrTimeout);
 
     this.logger.info("Proposed and got approval for agreement", {
       agreementId: agreement.id,
@@ -467,8 +477,12 @@ export class MarketModuleImpl implements MarketModule {
     return agreement;
   }
 
-  async terminateAgreement(agreement: Agreement, reason?: string): Promise<Agreement> {
-    await this.marketApi.terminateAgreement(agreement, reason);
+  async terminateAgreement(
+    agreement: Agreement,
+    reason?: string,
+    signalOrTimeout?: AbortSignal | number,
+  ): Promise<Agreement> {
+    await this.marketApi.terminateAgreement(agreement, reason, signalOrTimeout);
 
     this.logger.info("Terminated agreement", {
       agreementId: agreement.id,
@@ -665,8 +679,8 @@ export class MarketModuleImpl implements MarketModule {
     }
   }
 
-  async fetchAgreement(agreementId: string): Promise<Agreement> {
-    return this.marketApi.getAgreement(agreementId);
+  async fetchAgreement(agreementId: string, signalOrTimeout?: AbortSignal | number): Promise<Agreement> {
+    return this.marketApi.getAgreement(agreementId, signalOrTimeout);
   }
 
   /**

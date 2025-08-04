@@ -60,23 +60,27 @@ export class ResourceRental {
   }
 
   private async startStopAndFinalize(signalOrTimeout?: number | AbortSignal) {
+    const abortSignal = createAbortSignalFromTimeout(signalOrTimeout);
     try {
+      if (abortSignal.aborted) {
+        throw new GolemAbortError("The resource rental finalization has been aborted", abortSignal.reason);
+      }
+
       if (this.currentExeUnit) {
         await this.currentExeUnit.teardown();
       }
       this.abortController.abort("The resource rental is finalizing");
       if (this.currentExeUnit?.activity) {
-        await this.activityModule.destroyActivity(this.currentExeUnit.activity);
+        await this.activityModule.destroyActivity(this.currentExeUnit.activity, abortSignal);
       }
       if ((await this.fetchAgreementState()) !== "Terminated") {
-        await this.marketModule.terminateAgreement(this.agreement);
+        await this.marketModule.terminateAgreement(this.agreement, undefined, abortSignal);
       }
       if (this.paymentProcess.isFinished()) {
         return;
       }
 
       this.logger.info("Waiting for payment process of agreement to finish", { agreementId: this.agreement.id });
-      const abortSignal = createAbortSignalFromTimeout(signalOrTimeout);
       await waitFor(() => this.paymentProcess.isFinished(), {
         abortSignal: abortSignal,
       }).catch((error) => {
@@ -92,6 +96,9 @@ export class ResourceRental {
       this.logger.info("Finalized payment process", { agreementId: this.agreement.id });
     } catch (error) {
       this.logger.error("Filed to finalize payment process", { agreementId: this.agreement.id, error });
+      if (abortSignal.aborted) {
+        throw new GolemAbortError("The resource rental finalization has been aborted", error);
+      }
       throw error;
     } finally {
       this.events.emit("finalized");
@@ -149,10 +156,10 @@ export class ResourceRental {
    * Please note that if ResourceRental is left without ExeUnit for some time (default 90s)
    * the provider will terminate the Agreement and ResourceRental will be unuseble
    */
-  async destroyExeUnit() {
+  async destroyExeUnit(signalOrTimeout?: AbortSignal | number) {
     try {
       if (this.currentExeUnit !== null) {
-        await this.activityModule.destroyActivity(this.currentExeUnit.activity);
+        await this.activityModule.destroyActivity(this.currentExeUnit.activity, signalOrTimeout);
         this.currentExeUnit = null;
       } else {
         throw new GolemUserError(`There is no exe-unit to destroy.`);
@@ -164,8 +171,10 @@ export class ResourceRental {
     }
   }
 
-  async fetchAgreementState() {
-    return this.marketModule.fetchAgreement(this.agreement.id).then((agreement) => agreement.getState());
+  async fetchAgreementState(signalOrTimeout?: number | AbortSignal) {
+    return this.marketModule
+      .fetchAgreement(this.agreement.id, signalOrTimeout)
+      .then((agreement) => agreement.getState());
   }
 
   private async createExeUnit(abortSignal: AbortSignal) {
