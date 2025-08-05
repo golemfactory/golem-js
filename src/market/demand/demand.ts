@@ -88,7 +88,7 @@ export type OrderDemandOptions = Partial<{
   /** Demand properties that determine payment related terms & conditions of the agreement */
   payment: Partial<PaymentDemandDirectorConfigOptions>;
 }> &
-  /** Demand properties that determine most common paramters of the agreement (based on golemsp implementation */
+  /** Demand properties that determine most common parameters of the agreement (based on golemsp implementation */
   Partial<BasicDemandDirectorConfigOptions>;
 
 export interface IDemandRepository {

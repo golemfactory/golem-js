@@ -64,7 +64,7 @@ describe("Network", () => {
         new GolemNetworkError(`Unable to add node network-node-id to removed network`, NetworkErrorCode.NetworkRemoved),
       );
     });
-    test("should get first avialble ip adrress", () => {
+    test("should get first avialble ip address", () => {
       const network = new Network("network-id", "192.168.0.0/24");
       expect(network.getFirstAvailableIpAddress().toString()).toEqual("192.168.0.1");
     });
