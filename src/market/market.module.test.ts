@@ -2,7 +2,7 @@ import { _, imock, instance, mock, reset, spy, verify, when } from "@johanblumen
 import { Logger, waitAndCall, waitFor, YagnaApi } from "../shared/utils";
 import { MarketModuleImpl } from "./market.module";
 import { Demand, DemandSpecification } from "./demand";
-import { Subject, take } from "rxjs";
+import { Observable, Subject, take } from "rxjs";
 import { MarketProposalEvent, OfferProposal, ProposalProperties } from "./proposal";
 import { MarketApiAdapter } from "../shared/yagna/";
 import { IActivityApi, IFileServer } from "../activity";
@@ -428,8 +428,82 @@ describe("Market module", () => {
 
       verify(mockMarketApiAdapter.counterProposal(initialProposal, spec)).once();
     });
-  });
+    it("should retry collecting proposals after an error", async () => {
+      jest.useRealTimers();
 
+      const spec = new DemandSpecification(
+        {
+          properties: [],
+          constraints: [],
+        },
+        "erc20-holesky-tglm",
+      );
+
+      const mockProposal = mock(OfferProposal);
+      when(mockProposal.isValid()).thenReturn(true);
+      when(mockProposal.isDraft()).thenReturn(true);
+      when(mockProposal.isInitial()).thenReturn(false);
+      when(mockProposal.provider).thenReturn({
+        id: "test-provider-id",
+        name: "test-provider-name",
+        walletAddress: "0xTestWallet",
+      });
+      when(mockProposal.properties).thenReturn(initialOfferProperties);
+      when(mockProposal.pricing).thenReturn({
+        cpuSec: 0.4 / 3600,
+        envSec: 0.4 / 3600,
+        start: 0.4,
+      });
+      const validProposal = instance(mockProposal);
+
+      // Fail for 10 times in a row and then succeed
+      let attempts = 0;
+      const demandOfferEvent$ = new Observable<MarketProposalEvent>((subscriber) => {
+        if (attempts < 10) {
+          attempts++;
+          subscriber.error(new Error("Temporary error"));
+        } else {
+          subscriber.next({
+            type: "ProposalReceived",
+            proposal: validProposal,
+            timestamp: new Date(),
+          });
+          subscriber.complete();
+        }
+      });
+
+      when(mockMarketApiAdapter.collectMarketProposalEvents(_)).thenReturn(demandOfferEvent$);
+
+      const draftProposal$ = marketModule.collectDraftOfferProposals({
+        demandSpecification: spec,
+        proposalsBatchReleaseTimeoutMs: 1,
+        minProposalsBatchSize: 1,
+        pricing: {
+          model: "linear",
+          maxStartPrice: 0.5,
+          maxCpuPerHourPrice: 1.0,
+          maxEnvPerHourPrice: 0.5,
+        },
+        retryConfig: {
+          delay: 10,
+        },
+      });
+
+      const draftListener = jest.fn();
+      const errorListener = jest.fn();
+
+      const testSub = draftProposal$.subscribe({
+        next: draftListener,
+        error: errorListener,
+      });
+
+      await waitFor(() => draftListener.mock.calls.length > 0);
+      testSub.unsubscribe();
+
+      expect(draftListener).toHaveBeenCalledWith(validProposal);
+      expect(errorListener).not.toHaveBeenCalled();
+    });
+  });
   describe("signAgreementFromPool()", () => {
     beforeEach(() => {
       jest.useRealTimers();
@@ -507,7 +581,7 @@ describe("Market module", () => {
 
   describe("emitted events", () => {
     describe("agreement related events", () => {
-      test("Emits 'agreementConfirmed'", () => {
+      test("Emits 'agreementApproved'", () => {
         // Given
         const agreement = instance(mockAgreement);
 
