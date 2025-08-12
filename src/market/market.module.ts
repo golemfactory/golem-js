@@ -18,7 +18,7 @@ import {
   YagnaApi,
 } from "../shared/utils";
 import { Allocation, IPaymentApi } from "../payment";
-import { filter, map, Observable, OperatorFunction, switchMap, tap } from "rxjs";
+import { filter, map, Observable, OperatorFunction, retry, RetryConfig, switchMap, tap, timer } from "rxjs";
 import {
   OfferCounterProposal,
   OfferProposal,
@@ -203,6 +203,7 @@ export interface MarketModule {
     filter?: OfferProposalFilter;
     minProposalsBatchSize?: number;
     proposalsBatchReleaseTimeoutMs?: number;
+    retryConfig?: RetryConfig;
   }): Observable<OfferProposal>;
 
   /**
@@ -499,35 +500,62 @@ export class MarketModuleImpl implements MarketModule {
     filter?: OfferProposalFilter;
     minProposalsBatchSize?: number;
     proposalsBatchReleaseTimeoutMs?: number;
+    retryConfig?: RetryConfig;
   }): Observable<OfferProposal> {
-    return this.publishAndRefreshDemand(options.demandSpecification).pipe(
-      // For each fresh demand, start to watch the related market conversation events
-      switchMap((freshDemand) => this.collectMarketProposalEvents(freshDemand)),
-      // Select only events for proposal received
-      filter((event) => event.type === "ProposalReceived"),
-      // Convert event to proposal
-      map((event) => (event as OfferProposalReceivedEvent).proposal),
-      // We are interested only in Initial and Draft proposals, that are valid
-      filter((proposal) => (proposal.isInitial() || proposal.isDraft()) && proposal.isValid()),
-      // If they are accepted by the pricing criteria
-      filter((proposal) => this.filterProposalsByPricingOptions(options.pricing, proposal)),
-      // If they are accepted by the user filter
-      filter((proposal) => (options?.filter ? this.filterProposalsByUserFilter(options.filter, proposal) : true)),
-      // Batch initial proposals and  deduplicate them by provider key, pass-though proposals in other states
-      this.reduceInitialProposalsByProviderKey({
-        minProposalsBatchSize: options?.minProposalsBatchSize,
-        proposalsBatchReleaseTimeoutMs: options?.proposalsBatchReleaseTimeoutMs,
-      }),
-      // Tap-in negotiator logic and negotiate initial proposals
-      tap((proposal) => {
-        if (proposal.isInitial()) {
-          this.negotiateProposal(proposal, options.demandSpecification).catch((err) =>
-            this.logger.error("Failed to negotiate the proposal", err),
-          );
-        }
-      }),
-      // Continue only with drafts
-      filter((proposal) => proposal.isDraft()),
+    return (
+      this.publishAndRefreshDemand(options.demandSpecification)
+        .pipe(
+          // For each fresh demand, start to watch the related market conversation events
+          switchMap((freshDemand) => this.collectMarketProposalEvents(freshDemand)),
+          // Select only events for proposal received
+          filter((event) => event.type === "ProposalReceived"),
+          // Convert event to proposal
+          map((event) => (event as OfferProposalReceivedEvent).proposal),
+          // We are interested only in Initial and Draft proposals, that are valid
+          filter((proposal) => (proposal.isInitial() || proposal.isDraft()) && proposal.isValid()),
+          // If they are accepted by the pricing criteria
+          filter((proposal) => this.filterProposalsByPricingOptions(options.pricing, proposal)),
+          // If they are accepted by the user filter
+          filter((proposal) => (options?.filter ? this.filterProposalsByUserFilter(options.filter, proposal) : true)),
+          // Batch initial proposals and  deduplicate them by provider key, pass-though proposals in other states
+          this.reduceInitialProposalsByProviderKey({
+            minProposalsBatchSize: options?.minProposalsBatchSize,
+            proposalsBatchReleaseTimeoutMs: options?.proposalsBatchReleaseTimeoutMs,
+          }),
+          // Tap-in negotiator logic and negotiate initial proposals
+          tap((proposal) => {
+            if (proposal.isInitial()) {
+              this.negotiateProposal(proposal, options.demandSpecification).catch((err) =>
+                this.logger.error("Failed to negotiate the proposal", err),
+              );
+            }
+          }),
+          // Continue only with drafts
+          filter((proposal) => proposal.isDraft()),
+        )
+        // Chain pipes here because after 9 operators `.pipe` loses type inference
+        // (https://github.com/ReactiveX/rxjs/issues/4221#issuecomment-426774631)
+        .pipe(
+          tap({
+            error: (error) => {
+              this.logger.error("Encountered an error when collecting draft offer proposals", error);
+            },
+          }),
+          // Basic retry logic, since yagna can occasionally hit us with a 500
+          retry({
+            delay: (_, retryCount) => {
+              // Exponential backoff with 60 seconds cap
+              const retryDelay = Math.min(1000 * 2 ** (retryCount - 1), 60_000);
+              this.logger.info("Retrying draft offer proposal pipeline after delay", {
+                retryCount,
+                retryDelay,
+              });
+              return timer(retryDelay);
+            },
+            resetOnSuccess: true,
+            ...options.retryConfig,
+          }),
+        )
     );
   }
 
@@ -619,14 +647,27 @@ export class MarketModuleImpl implements MarketModule {
           minBatchSize: options?.minProposalsBatchSize,
           releaseTimeoutMs: options?.proposalsBatchReleaseTimeoutMs,
         });
-        const subscription = input.subscribe((proposal) => {
-          if (proposal.isInitial()) {
-            proposalsBatch
-              .addProposal(proposal)
-              .catch((err) => this.logger.error("Failed to add the initial proposal to the batch", err));
-          } else {
-            observer.next(proposal);
-          }
+        const subscription = input.subscribe({
+          next: (proposal) => {
+            try {
+              if (proposal.isInitial()) {
+                proposalsBatch
+                  .addProposal(proposal)
+                  .catch((err) => this.logger.error("Failed to add the initial proposal to the batch", err));
+              } else {
+                observer.next(proposal);
+              }
+            } catch (err) {
+              this.logger.error("Error processing proposal", err);
+              observer.error(err);
+            }
+          },
+          error: (err) => {
+            observer.error(err);
+          },
+          complete: () => {
+            isCancelled = true;
+          },
         });
 
         const batch = async () => {
