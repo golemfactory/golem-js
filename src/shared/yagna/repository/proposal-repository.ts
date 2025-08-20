@@ -4,16 +4,23 @@ import { Demand, GolemMarketError, MarketErrorCode } from "../../../market";
 import { CacheService } from "../../cache/CacheService";
 import { IProposalRepository, MarketProposal } from "../../../market/proposal/market-proposal";
 import { OfferCounterProposal } from "../../../market/proposal/offer-counter-proposal";
+import { ExpirationManager } from "../../expiration/ExpirationManager";
 
 export class ProposalRepository implements IProposalRepository {
   constructor(
     private readonly marketService: MarketApi.RequestorService,
     private readonly identityService: IdentityApi.DefaultService,
     private readonly cache: CacheService<MarketProposal>,
-  ) {}
+    private readonly expirationManager: ExpirationManager,
+  ) {
+    this.expirationManager.registerCleanupFunction((proposalId: string) => {
+      this.cache.delete(proposalId);
+    });
+  }
 
   add(proposal: MarketProposal) {
     this.cache.set(proposal.id, proposal);
+    this.expirationManager.registerObjectForCleanup(proposal.id);
     return proposal;
   }
 

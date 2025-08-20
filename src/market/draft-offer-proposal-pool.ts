@@ -4,6 +4,7 @@ import { GolemMarketError, MarketErrorCode } from "./error";
 import { createAbortSignalFromTimeout, defaultLogger, Logger, runOnNextEventLoopIteration } from "../shared/utils";
 import { Observable, Subscription } from "rxjs";
 import { AcquireQueue } from "../shared/utils/acquireQueue";
+import { ExpirationManager } from "../shared/expiration/ExpirationManager";
 
 export type OfferProposalSelector = (proposals: OfferProposal[]) => OfferProposal | null;
 
@@ -28,6 +29,8 @@ export interface ProposalPoolOptions {
   minCount?: number;
 
   logger?: Logger;
+
+  expirationManager?: ExpirationManager;
 }
 
 export interface ProposalPoolEvents {
@@ -68,16 +71,19 @@ export class DraftOfferProposalPool {
   /** {@link ProposalPoolOptions.validateOfferProposal} */
   private readonly validateOfferProposal: OfferProposalFilter = (proposal: OfferProposal) => proposal !== undefined;
 
+  /** {@link ProposalPoolOptions.expirationManager} */
+  private readonly expirationManager: ExpirationManager | undefined = undefined;
+
   /**
    * The proposals that were not yet leased to anyone and are available for lease
    */
-  private available = new Set<OfferProposal>();
+  private available = new Map<OfferProposal["id"], OfferProposal>();
 
   /**
    * Returns a read-only copy of all draft offers currently in the pool
    */
   public getAvailable(): Array<OfferProposal> {
-    return [...this.available];
+    return [...this.available.values()];
   }
 
   /**
@@ -97,6 +103,13 @@ export class DraftOfferProposalPool {
       this.minCount = options.minCount;
     }
 
+    if (options?.expirationManager) {
+      this.expirationManager = options.expirationManager;
+      this.expirationManager.registerCleanupFunction((proposalId: string) => {
+        this.removeFromAvailable(proposalId);
+      });
+    }
+
     this.logger = this.logger = options?.logger || defaultLogger("proposal-pool");
   }
 
@@ -114,7 +127,7 @@ export class DraftOfferProposalPool {
       return;
     }
 
-    this.available.add(proposal);
+    this.available.set(proposal.id, proposal);
 
     this.events.emit("added", { proposal });
   }
@@ -147,7 +160,7 @@ export class DraftOfferProposalPool {
       }
       if (!this.validateOfferProposal(proposal)) {
         // Drop if not valid
-        this.removeFromAvailable(proposal);
+        this.removeFromAvailable(proposal.id);
         // and try again
         return runOnNextEventLoopIteration(tryGettingFromAvailable);
       }
@@ -158,7 +171,7 @@ export class DraftOfferProposalPool {
     // Try to get one
 
     if (proposal) {
-      this.available.delete(proposal);
+      this.available.delete(proposal.id);
       this.leased.add(proposal);
       this.events.emit("acquired", { proposal });
       return proposal;
@@ -184,7 +197,7 @@ export class DraftOfferProposalPool {
         return;
       }
       // otherwise, put it back to the list of available proposals
-      this.available.add(proposal);
+      this.available.set(proposal.id, proposal);
     } else {
       this.events.emit("removed", { proposal });
     }
@@ -196,8 +209,8 @@ export class DraftOfferProposalPool {
       this.events.emit("removed", { proposal });
     }
 
-    if (this.available.has(proposal)) {
-      this.available.delete(proposal);
+    if (this.available.has(proposal.id)) {
+      this.available.delete(proposal.id);
       this.events.emit("removed", { proposal });
     }
   }
@@ -235,8 +248,8 @@ export class DraftOfferProposalPool {
    */
   public async clear() {
     this.acquireQueue.releaseAll();
-    for (const proposal of this.available) {
-      this.available.delete(proposal);
+    for (const [id, proposal] of this.available) {
+      this.available.delete(id);
       this.events.emit("removed", { proposal });
     }
 
@@ -245,19 +258,26 @@ export class DraftOfferProposalPool {
       this.events.emit("removed", { proposal });
     }
 
-    this.available = new Set();
+    this.available = new Map();
     this.leased = new Set();
     this.events.emit("cleared");
   }
 
-  protected removeFromAvailable(proposal: OfferProposal): void {
-    this.available.delete(proposal);
-    this.events.emit("removed", { proposal });
+  protected removeFromAvailable(proposalId: OfferProposal["id"]): void {
+    const proposalToDelete = this.available.get(proposalId);
+    if (!proposalToDelete) return;
+    this.available.delete(proposalId);
+    this.events.emit("removed", { proposal: proposalToDelete });
   }
 
   public readFrom(source: Observable<OfferProposal>): Subscription {
     return source.subscribe({
-      next: (proposal) => this.add(proposal),
+      next: (proposal) => {
+        if (this.expirationManager) {
+          this.expirationManager.registerObjectForCleanup(proposal.id);
+        }
+        this.add(proposal);
+      },
       error: (err) => this.logger.error("Error while collecting proposals", err),
     });
   }
