@@ -7,12 +7,14 @@ describe("Draft Offer Proposal Pool", () => {
   const mockProposal = mock(OfferProposal);
   // Most of the time we're testing the case when the Proposal is in `Draft` status
   when(mockProposal.isDraft()).thenReturn(true);
+  when(mockProposal.id).thenReturn("1");
 
   // NOTE: ts-mockito instance + JS Set.add() doesn't play along, 2x instance(mockProposal) produces "the same" value for (Set.add)
 
   const secondMockProposal = mock(OfferProposal);
   // Most of the time we're testing the case when the Proposal is in `Draft` status
   when(secondMockProposal.isDraft()).thenReturn(true);
+  when(secondMockProposal.id).thenReturn("2");
 
   describe("Adding proposals", () => {
     describe("Positive cases", () => {
