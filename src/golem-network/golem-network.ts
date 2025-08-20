@@ -37,6 +37,7 @@ import { IProposalRepository } from "../market/proposal";
 import { Subscription } from "rxjs";
 import { GolemConfigError, GolemUserError } from "../shared/error/golem-error";
 import { GolemPluginInitializer, GolemPluginOptions, GolemPluginRegistration } from "./plugin";
+import { ExpirationManager } from "../shared/expiration/ExpirationManager";
 
 /**
  * Instance of an object or a factory function that you can call `new` on.
@@ -66,6 +67,21 @@ function getFactory<
     return () => override;
   }
   return (...args) => new defaultFactory(...args);
+}
+
+interface MarketProposalExpirationOptions {
+  /**
+   * Number of milliseconds before a market proposal is considered stale and will be
+   * removed from all internal caches and DraftOfferProposalPools created by `oneOf` and `manyOf`.
+   * If unspecified it defaults to twice the demand refresh interval (`market.demandRefreshIntervalSec`) if
+   * that's specified or 30 minutes otherwise.
+   */
+  offerProposalTTLMs: number;
+
+  /**
+   * Interval at which to check for expired proposals in milliseconds. Defaults to 60s.
+   */
+  offerProposalCleanupIntervalMs: number;
 }
 
 export interface GolemNetworkOptions {
@@ -98,7 +114,7 @@ export interface GolemNetworkOptions {
    * This is where you can globally specify several options that determine how the SDK will
    * interact with the market.
    */
-  market?: Partial<MarketModuleOptions>;
+  market?: Partial<MarketModuleOptions> & Partial<MarketProposalExpirationOptions>;
 
   /**
    * Set the data transfer protocol to use for file transfers.
@@ -197,6 +213,7 @@ export type GolemServices = {
   demandRepository: IDemandRepository;
   fileServer: IFileServer;
   storageProvider: StorageProvider;
+  proposalExpirationManager: ExpirationManager;
 };
 
 /**
@@ -267,8 +284,23 @@ export class GolemNetwork {
       const demandCache = new CacheService<Demand>();
       const proposalCache = new CacheService<OfferProposal>();
 
+      const proposalExpirationManager = new ExpirationManager({
+        logger: this.logger.child("expiration-manager"),
+        intervalMs: options.market?.offerProposalCleanupIntervalMs || 60 * 1000, // default 60s
+        timeToLiveMs:
+          options.market?.offerProposalTTLMs ||
+          (options?.market?.demandRefreshIntervalSec
+            ? options?.market?.demandRefreshIntervalSec * 1000 * 2
+            : 30 * 60 * 1000),
+      });
+
       const demandRepository = new DemandRepository(this.yagna.market, demandCache);
-      const proposalRepository = new ProposalRepository(this.yagna.market, this.yagna.identity, proposalCache);
+      const proposalRepository = new ProposalRepository(
+        this.yagna.market,
+        this.yagna.identity,
+        proposalCache,
+        proposalExpirationManager,
+      );
       const agreementRepository = new AgreementRepository(this.yagna.market, demandRepository);
 
       this.services = {
@@ -278,6 +310,7 @@ export class GolemNetwork {
         demandRepository,
         proposalCache,
         proposalRepository,
+        proposalExpirationManager,
         paymentApi:
           this.options.override?.paymentApi ||
           new PaymentApiAdapter(
@@ -338,6 +371,7 @@ export class GolemNetwork {
       await this.services.paymentApi.connect();
       await this.storageProvider.init();
       await this.connectPlugins();
+      this.services.proposalExpirationManager.start();
       this.events.emit("connected");
       this.hasConnection = true;
     } catch (err) {
@@ -359,6 +393,7 @@ export class GolemNetwork {
         .catch((err) =>
           this.logger.warn("Closing connections with yagna resulted with an error, it will be ignored", err),
         );
+      this.services.proposalExpirationManager.stopAndReset();
       this.services.proposalCache.flushAll();
       this.abortController = new AbortController();
     } catch (err) {
@@ -487,6 +522,7 @@ export class GolemNetwork {
         logger: this.logger,
         validateOfferProposal: order.market.offerProposalFilter,
         selectOfferProposal: order.market.offerProposalSelector,
+        expirationManager: this.services.proposalExpirationManager,
       });
 
       allocation = await this.getAllocationFromOrder({ order, maxAgreements: 1 });
@@ -611,6 +647,7 @@ export class GolemNetwork {
         logger: this.logger,
         validateOfferProposal: order.market.offerProposalFilter,
         selectOfferProposal: order.market.offerProposalSelector,
+        expirationManager: this.services.proposalExpirationManager,
       });
 
       const maxAgreements = typeof poolSize === "number" ? poolSize : (poolSize?.max ?? poolSize?.min ?? 1);
