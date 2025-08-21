@@ -410,7 +410,9 @@ export class MarketModuleImpl implements MarketModule {
               this.events.emit("demandSubscriptionRefreshed", {
                 demand,
               });
-              this.logger.info("Refreshed subscription for offer proposals with the new demand", { demand });
+              this.logger.info("Refreshed subscription for offer proposals with the new demand", {
+                demandId: demand.id,
+              });
             }
           })
           .catch((err) => {
