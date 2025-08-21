@@ -38,7 +38,8 @@ export class ResourceRental {
   public readonly networkNode?: NetworkNode;
 
   private currentExeUnit: ExeUnit | null = null;
-  private abortController = new AbortController();
+  private finalizeAbortController = new AbortController();
+  private setupAbortController = new AbortController();
   private finalizePromise?: Promise<void>;
   private exeUnitPromise?: Promise<ExeUnit>;
 
@@ -53,7 +54,12 @@ export class ResourceRental {
   ) {
     this.networkNode = this.resourceRentalOptions?.networkNode;
 
-    this.createExeUnit(this.abortController.signal).catch((error) =>
+    // Interrupt deployment of activity/exe when rental gets finalized
+    this.finalizeAbortController.signal.addEventListener("abort", () => {
+      this.setupAbortController.abort(this.finalizeAbortController.signal.reason);
+    });
+
+    this.createExeUnit(this.setupAbortController.signal).catch((error) =>
       this.logger.debug(`Failed to automatically create the exe unit during resource rental initialization`, { error }),
     );
     // TODO: Listen to agreement events to know when it goes down due to provider closing it!
@@ -69,7 +75,7 @@ export class ResourceRental {
       if (this.currentExeUnit) {
         await this.currentExeUnit.teardown();
       }
-      this.abortController.abort("The resource rental is finalizing");
+      this.finalizeAbortController.abort("The resource rental is finalizing");
       if (this.currentExeUnit?.activity) {
         await this.activityModule.destroyActivity(this.currentExeUnit.activity, abortSignal);
       }
@@ -131,15 +137,15 @@ export class ResourceRental {
    * especially when the exe-unit is in the process of starting, deploying and preparing the environment (including setup function)
    */
   async getExeUnit(signalOrTimeout?: number | AbortSignal): Promise<ExeUnit> {
-    if (this.finalizePromise || this.abortController.signal.aborted) {
+    if (this.finalizePromise || this.finalizeAbortController.signal.aborted) {
       throw new GolemUserError("The resource rental is not active. It may have been aborted or finalized");
     }
     if (this.currentExeUnit !== null) {
       return this.currentExeUnit;
     }
     const abortController = new AbortController();
-    this.abortController.signal.addEventListener("abort", () =>
-      abortController.abort(this.abortController.signal.reason),
+    this.finalizeAbortController.signal.addEventListener("abort", () =>
+      abortController.abort(this.finalizeAbortController.signal.reason),
     );
     if (signalOrTimeout) {
       const abortSignal = createAbortSignalFromTimeout(signalOrTimeout);
@@ -178,9 +184,12 @@ export class ResourceRental {
   }
 
   private async createExeUnit(abortSignal: AbortSignal) {
+    abortSignal.addEventListener("abort", () => {
+      this.setupAbortController.abort(abortSignal.reason);
+    });
     if (!this.exeUnitPromise) {
       this.exeUnitPromise = (async () => {
-        const activity = await this.activityModule.createActivity(this.agreement);
+        const activity = await this.activityModule.createActivity(this.agreement, abortSignal);
         this.currentExeUnit = await this.activityModule.createExeUnit(activity, {
           storageProvider: this.storageProvider,
           networkNode: this.resourceRentalOptions?.networkNode,
