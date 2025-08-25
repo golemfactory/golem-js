@@ -214,8 +214,9 @@ describe("ResourceRentalPool", () => {
     // wait for init and destroy the exe-unit created automatically on startup rental
     await rental.getExeUnit();
     await rental.destroyExeUnit();
+    // the call to `.createActivity` will be aborted
     await expect(rental.getExeUnit(10)).rejects.toThrow(
-      new GolemAbortError("Initializing of the exe-unit has been aborted due to a timeout"),
+      new GolemAbortError("Failed to create activity: Request aborted"),
     );
   });
 
