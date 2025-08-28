@@ -607,7 +607,7 @@ export class GolemNetwork {
    * @param options.order - represents the order specifications which will result in access to LeaseProcess.
    * @param options.poolSize {Object | number} - can be defined as a number or an object with min and max fields, if defined as a number it will be treated as a min parameter.
    * @param options.poolSize.min - the minimum pool size to achieve ready state (default = 0)
-   * @param options.poolSize.max - the maximum pool size, if reached, the next pool element will only be available if the borrowed resource is released or destroyed (dafault = 100)
+   * @param options.poolSize.max - the maximum pool size, if reached, the next pool element will only be available if the borrowed resource is released or destroyed (default = 100)
    * @param options.setup - an optional function that is called as soon as the exe unit is ready
    * @param options.teardown - an optional function that is called before the exe unit is destroyed
    */

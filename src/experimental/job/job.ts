@@ -37,7 +37,7 @@ export interface JobEventsDict {
    */
   canceled: () => void;
   /**
-   * Emitted when the job finishes cleanup after success, error or cancelation.
+   * Emitted when the job finishes cleanup after success, error or cancellation.
    */
   ended: () => void;
 }
