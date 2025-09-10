@@ -41,29 +41,38 @@ export interface NetworkModule {
   /**
    * Creates a new network with the specified options.
    * @param options NetworkOptions
+   * @param signalOrTimeout - The timeout in milliseconds or an AbortSignal that will be used to cancel the operation
    */
-  createNetwork(options?: NetworkOptions): Promise<Network>;
+  createNetwork(options?: NetworkOptions, signalOrTimeout?: number | AbortSignal): Promise<Network>;
 
   /**
    * Removes an existing network.
    * @param network - The network to be removed.
+   * @param signalOrTimeout - The timeout in milliseconds or an AbortSignal that will be used to cancel the operation
    */
-  removeNetwork(network: Network): Promise<void>;
+  removeNetwork(network: Network, signalOrTimeout?: number | AbortSignal): Promise<void>;
 
   /**
    * Creates a new node within a specified network.
    * @param network - The network to which the node will be added.
    * @param nodeId - The ID of the node to be created.
    * @param nodeIp - Optional IP address for the node. If not provided, the first available IP address will be assigned.
+   * @param signalOrTimeout - The timeout in milliseconds or an AbortSignal that will be used to cancel the operation
    */
-  createNetworkNode(network: Network, nodeId: string, nodeIp?: string): Promise<NetworkNode>;
+  createNetworkNode(
+    network: Network,
+    nodeId: string,
+    nodeIp?: string,
+    signalOrTimeout?: number | AbortSignal,
+  ): Promise<NetworkNode>;
 
   /**
    * Removes an existing node from a specified network.
    * @param network - The network from which the node will be removed.
    * @param node - The node to be removed.
+   * @param signalOrTimeout - The timeout in milliseconds or an AbortSignal that will be used to cancel the operation
    */
-  removeNetworkNode(network: Network, node: NetworkNode): Promise<void>;
+  removeNetworkNode(network: Network, node: NetworkNode, signalOrTimeout?: number | AbortSignal): Promise<void>;
 }
 
 export class NetworkModuleImpl implements NetworkModule {
@@ -82,7 +91,7 @@ export class NetworkModuleImpl implements NetworkModule {
     }
   }
 
-  async createNetwork(options?: NetworkOptions): Promise<Network> {
+  async createNetwork(options?: NetworkOptions, signalOrTimeout?: number | AbortSignal): Promise<Network> {
     this.logger.debug(`Creating network`, options);
     try {
       const ipDecimalDottedString = options?.ip?.split("/")?.[0] || "192.168.0.0";
@@ -92,13 +101,16 @@ export class NetworkModuleImpl implements NetworkModule {
       const ip = ipRange.getFirst();
       const mask = ipRange.getPrefix().toMask();
       const gateway = options?.gateway ? new IPv4(options.gateway) : undefined;
-      const network = await this.networkApi.createNetwork({
-        ip: ip.toString(),
-        mask: mask?.toString(),
-        gateway: gateway?.toString(),
-      });
+      const network = await this.networkApi.createNetwork(
+        {
+          ip: ip.toString(),
+          mask: mask?.toString(),
+          gateway: gateway?.toString(),
+        },
+        signalOrTimeout,
+      );
       // add Requestor as network node
-      const requestorId = await this.networkApi.getIdentity();
+      const requestorId = await this.networkApi.getIdentity(signalOrTimeout);
       await this.createNetworkNode(network, requestorId, options?.ownerIp);
       this.logger.info(`Created network`, network.getNetworkInfo());
       this.events.emit("networkCreated", { network });
@@ -118,11 +130,11 @@ export class NetworkModuleImpl implements NetworkModule {
       throw error;
     }
   }
-  async removeNetwork(network: Network): Promise<void> {
+  async removeNetwork(network: Network, signalOrTimeout?: number | AbortSignal): Promise<void> {
     this.logger.debug(`Removing network`, network.getNetworkInfo());
     await this.lock.acquire(`net-${network.id}`, async () => {
       try {
-        await this.networkApi.removeNetwork(network);
+        await this.networkApi.removeNetwork(network, signalOrTimeout);
         network.markAsRemoved();
         this.logger.info(`Removed network`, network.getNetworkInfo());
         this.events.emit("networkRemoved", { network });
@@ -133,7 +145,12 @@ export class NetworkModuleImpl implements NetworkModule {
     });
   }
 
-  async createNetworkNode(network: Network, nodeId: string, nodeIp?: string): Promise<NetworkNode> {
+  async createNetworkNode(
+    network: Network,
+    nodeId: string,
+    nodeIp?: string,
+    signalOrTimeout?: number | AbortSignal,
+  ): Promise<NetworkNode> {
     this.logger.debug(`Creating network node`, { nodeId, nodeIp });
     return await this.lock.acquire(`net-${network.id}`, async () => {
       try {
@@ -152,7 +169,7 @@ export class NetworkModuleImpl implements NetworkModule {
           );
         }
         const ipv4 = this.getFreeIpInNetwork(network, nodeIp);
-        const node = await this.networkApi.createNetworkNode(network, nodeId, ipv4.toString());
+        const node = await this.networkApi.createNetworkNode(network, nodeId, ipv4.toString(), signalOrTimeout);
         network.addNode(node);
         this.logger.info(`Added network node`, { id: nodeId, ip: ipv4.toString() });
         this.events.emit("nodeCreated", { network, node });
@@ -164,7 +181,7 @@ export class NetworkModuleImpl implements NetworkModule {
     });
   }
 
-  async removeNetworkNode(network: Network, node: NetworkNode): Promise<void> {
+  async removeNetworkNode(network: Network, node: NetworkNode, signalOrTimeout?: number | AbortSignal): Promise<void> {
     this.logger.debug(`Removing network node`, { nodeId: node.id, nodeIp: node.ip });
     return await this.lock.acquire(`net-${network.id}`, async () => {
       try {
@@ -182,7 +199,7 @@ export class NetworkModuleImpl implements NetworkModule {
           });
           return;
         }
-        await this.networkApi.removeNetworkNode(network, node);
+        await this.networkApi.removeNetworkNode(network, node, signalOrTimeout);
         network.removeNode(node);
         this.logger.info(`Removed network node`, {
           network: network.getNetworkInfo().ip,

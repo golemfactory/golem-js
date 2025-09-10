@@ -9,7 +9,7 @@ import { MarketApiAdapter, PaymentApiAdapter } from "../shared/yagna";
 import { ActivityApiAdapter } from "../shared/yagna/adapters/activity-api-adapter";
 import { GolemNetwork, MarketOrderSpec } from "./golem-network";
 import { _, instance, mock, reset, spy, verify, when } from "@johanblumenberg/ts-mockito";
-import { GftpStorageProvider } from "../shared/storage";
+import { WebSocketStorageProvider } from "../shared/storage";
 
 const order: MarketOrderSpec = Object.freeze({
   demand: {
@@ -41,7 +41,7 @@ const mockYagna = mock(YagnaApi);
 const mockPaymentApi = mock(PaymentApiAdapter);
 const mockActivityApi = mock(ActivityApiAdapter);
 const mockMarketApi = mock(MarketApiAdapter);
-const mockStorageProvider = mock(GftpStorageProvider);
+const mockStorageProvider = mock(WebSocketStorageProvider);
 
 afterEach(() => {
   reset(mockYagna);

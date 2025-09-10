@@ -133,7 +133,7 @@ export class Deployment {
 
     const totalBudget = this.components.resourceRentalPools.reduce((acc, pool) => {
       const replicas = pool.options.deployment.replicas;
-      const maxAgreements = typeof replicas === "number" ? replicas : replicas?.max ?? replicas?.min ?? 1;
+      const maxAgreements = typeof replicas === "number" ? replicas : (replicas?.max ?? replicas?.min ?? 1);
       return (
         acc +
         this.modules.market.estimateBudget({

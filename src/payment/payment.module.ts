@@ -97,7 +97,7 @@ export class PaymentModuleImpl implements PaymentModule {
   constructor(deps: GolemServices, options?: PaymentModuleOptions) {
     const network = options?.network ?? this.options.network;
     const driver = options?.driver ?? this.options.driver;
-    const token = options?.token ?? MAINNETS.includes(network) ? "glm" : "tglm";
+    const token = options?.token ?? (MAINNETS.includes(network) ? "glm" : "tglm");
     this.options = { network, driver, token };
 
     this.logger = deps.logger;
@@ -149,7 +149,7 @@ export class PaymentModuleImpl implements PaymentModule {
       this.logger.info("Created allocation", {
         allocationId: allocation.id,
         budget: allocation.totalAmount,
-        platform: this.getPaymentPlatform(),
+        platform: allocation.paymentPlatform,
       });
       this.logger.debug("Created allocation", allocation);
       return allocation;

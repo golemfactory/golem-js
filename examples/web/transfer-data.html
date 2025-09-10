@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Requestor in browser</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
+      crossorigin="anonymous"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <h1 class="pb-4">Transfer some data to the provider, process it there and download the result</h1>
+      <div class="row pb-4">
+        <h3>Options</h3>
+        <div id="options" class="row">
+          <div class="col-4 form-group">
+            <label for="YAGNA_APPKEY">Yagna AppKey: </label>
+            <input id="YAGNA_APPKEY" class="form-control" type="text" value="" />
+          </div>
+          <div class="col-4 form-group">
+            <label for="YAGNA_API_BASEPATH">Yagna Api Url: </label>
+            <input id="YAGNA_API_BASEPATH" class="form-control" type="text" value="http://127.0.0.1:7465" />
+          </div>
+        </div>
+        <div class="row pb-4">
+          <div class="col-4 form-group">
+            <label for="IMAGE_TAG">Image Tag: </label>
+            <input id="IMAGE_TAG" type="text" class="form-control" value="golem/alpine:latest" />
+          </div>
+          <div class="col-4 form-group">
+            <label for="SUBNET_TAG">Subnet Tag: </label>
+            <input id="SUBNET_TAG" type="text" class="form-control" value="public" />
+          </div>
+          <div class="col-4 form-group">
+            <label for="PAYMENT_NETWORK">Payment Network: </label>
+            <input id="PAYMENT_NETWORK" type="text" class="form-control" value="holesky" />
+          </div>
+        </div>
+      </div>
+      <div class="row pb-4">
+        <div class="form-group">
+          <label for="DATA">Data to be processed: </label>
+          <textarea id="DATA" class="form-control" rows="2">Hello Golem!</textarea>
+        </div>
+      </div>
+      <div class="row pb-4">
+        <h3>Actions</h3>
+        <div>
+          <button id="transfer-data" class="btn btn-primary" onclick="run()">Process file on the provider</button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="alert alert-info" role="alert">
+          <h4 class="alert-heading">Debugging</h4>
+          <p>You can see <code>@golem-sdk/golem-js</code> logs in your browser&apos;s <code>console</code> :)</p>
+        </div>
+        <h3>Results</h3>
+        <div class="col">
+          <ul id="results"></ul>
+        </div>
+      </div>
+    </div>
+
+    <script type="module">
+      import { GolemNetwork } from "https://unpkg.com/@golem-sdk/golem-js";
+
+      // This line allows you to watch golem-js internal logs in the browser console!
+      localStorage.debug = "golem-js:*";
+
+      export function appendResults(result) {
+        const resultsEl = document.getElementById("results");
+        const li = document.createElement("li");
+        li.appendChild(document.createTextNode(result));
+        resultsEl.appendChild(li);
+      }
+
+      async function run() {
+        const key = document.getElementById("YAGNA_APPKEY").value;
+
+        if (!key) {
+          alert("You didn't provide your Yagna AppKey");
+          return;
+        }
+
+        const url = document.getElementById("YAGNA_API_BASEPATH").value;
+        const subnetTag = document.getElementById("SUBNET_TAG").value;
+        const imageTag = document.getElementById("IMAGE_TAG").value;
+        const network = document.getElementById("PAYMENT_NETWORK").value;
+
+        // Define the order that we're going to place on the market
+        const order = {
+          demand: {
+            workload: {
+              imageTag,
+            },
+            subnetTag,
+          },
+          market: {
+            rentHours: 0.5,
+            pricing: {
+              model: "linear",
+              maxStartPrice: 0.5,
+              maxCpuPerHourPrice: 1.0,
+              maxEnvPerHourPrice: 0.5,
+            },
+          },
+          payment: { network },
+        };
+
+        const glm = new GolemNetwork({
+          api: { key, url },
+        });
+
+        glm.payment.events.on("invoiceAccepted", ({ invoice }) => appendResults(`Total cost: ${invoice.amount} GLM`));
+
+        try {
+          appendResults("Establishing a connection to the Golem Network");
+          await glm.connect();
+          appendResults("Request for renting a provider machine");
+          const rental = await glm.oneOf({ order });
+          appendResults("Rented resources from " + rental.agreement.provider.name);
+          await rental.getExeUnit().then(async (exe) => {
+            appendResults("Uploading some data to the provider");
+            const data = document.getElementById("DATA").value;
+            await exe.uploadData(new TextEncoder().encode(data), "/golem/work/input.txt");
+            appendResults("Processing the data on the provider");
+            await exe.run(
+              "cat /golem/work/input.txt | tr '[:upper:][:lower:]' '[:lower:][:upper:]' > /golem/work/output.txt",
+            );
+            appendResults("Downloading the result");
+            const result = await exe.downloadData("/golem/work/output.txt");
+            appendResults("Result: " + new TextDecoder().decode(result.data));
+          });
+          appendResults("Finished all work with the resources");
+          await rental.stopAndFinalize();
+          appendResults("Finalized renting process");
+        } catch (err) {
+          console.error("Failed to run the example", err);
+        } finally {
+          await glm.disconnect();
+        }
+      }
+
+      window.run = run;
+    </script>
+  </body>
+</html>

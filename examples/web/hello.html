@@ -115,7 +115,7 @@
           await glm.connect();
           appendResults("Request for renting a provider machine");
           const rental = await glm.oneOf({ order });
-          appendResults("Rented resources from", rental.agreement.provider.name);
+          appendResults("Rented resources from " + rental.agreement.provider.name);
           await rental
             .getExeUnit()
             .then(async (exe) =>

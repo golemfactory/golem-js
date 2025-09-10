@@ -99,7 +99,7 @@ export interface IMarketApi {
   /**
    * Retrieves an agreement based on the provided ID.
    */
-  getAgreement(id: string): Promise<Agreement>;
+  getAgreement(id: string, signalOrTimeout?: AbortSignal | number): Promise<Agreement>;
 
   /**
    * Request creating an agreement from the provided proposal
@@ -117,22 +117,30 @@ export interface IMarketApi {
    *
    * @return An agreement that's already in an "Approved" state and can be used to create activities on the Provider
    */
-  proposeAgreement(proposal: OfferProposal, options?: AgreementOptions): Promise<Agreement>;
+  proposeAgreement(
+    proposal: OfferProposal,
+    options?: AgreementOptions,
+    signalOrTimeout?: AbortSignal | number,
+  ): Promise<Agreement>;
 
   /**
    * Confirms the agreement with the provider
    */
-  confirmAgreement(agreement: Agreement, options?: AgreementOptions): Promise<Agreement>;
+  confirmAgreement(
+    agreement: Agreement,
+    options?: AgreementOptions,
+    signalOrTimeout?: AbortSignal | number,
+  ): Promise<Agreement>;
 
   /**
    * Terminates an agreement.
    */
-  terminateAgreement(agreement: Agreement, reason?: string): Promise<Agreement>;
+  terminateAgreement(agreement: Agreement, reason?: string, signalOrTimeout?: AbortSignal | number): Promise<Agreement>;
 
   /**
    * Retrieves the state of an agreement based on the provided agreement ID.
    */
-  getAgreementState(id: string): Promise<AgreementState>;
+  getAgreementState(id: string, signalOrTimeout?: AbortSignal | number): Promise<AgreementState>;
 
   /**
    * Scan the market for offers that match the given specification.

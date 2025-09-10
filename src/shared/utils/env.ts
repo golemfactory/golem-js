@@ -5,21 +5,21 @@ export function getYagnaApiUrl(): string {
 }
 
 export function getYagnaAppKey(): string {
-  return isNode ? process?.env.YAGNA_APPKEY ?? "" : "";
+  return isNode ? (process?.env.YAGNA_APPKEY ?? "") : "";
 }
 
 export function getYagnaSubnet(): string {
-  return isNode ? process?.env.YAGNA_SUBNET ?? "public" : "public";
+  return isNode ? (process?.env.YAGNA_SUBNET ?? "public") : "public";
 }
 
 export function getRepoUrl(): string {
   return isNode
-    ? process?.env.GOLEM_REGISTRY_URL ?? "https://registry.golem.network"
+    ? (process?.env.GOLEM_REGISTRY_URL ?? "https://registry.golem.network")
     : "https://registry.golem.network";
 }
 
 export function getPaymentNetwork(): string {
-  return isNode ? process.env.PAYMENT_NETWORK ?? "holesky" : "holesky";
+  return isNode ? (process.env.PAYMENT_NETWORK ?? "holesky") : "holesky";
 }
 
 export function isDevMode(): boolean {

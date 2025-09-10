@@ -24,7 +24,7 @@ export interface ResourceRentalEvents {
 }
 
 export interface ResourceRentalOptions {
-  exeUnit?: Pick<ExeUnitOptions, "setup" | "teardown" | "activityDeployingTimeout">;
+  exeUnit?: Pick<ExeUnitOptions, "setup" | "teardown" | "activityDeployingTimeout" | "volumes">;
   activity?: ExecutionOptions;
   payment?: Partial<PaymentProcessOptions>;
   networkNode?: NetworkNode;
@@ -38,7 +38,8 @@ export class ResourceRental {
   public readonly networkNode?: NetworkNode;
 
   private currentExeUnit: ExeUnit | null = null;
-  private abortController = new AbortController();
+  private finalizeAbortController = new AbortController();
+  private setupAbortController = new AbortController();
   private finalizePromise?: Promise<void>;
   private exeUnitPromise?: Promise<ExeUnit>;
 
@@ -53,30 +54,39 @@ export class ResourceRental {
   ) {
     this.networkNode = this.resourceRentalOptions?.networkNode;
 
-    this.createExeUnit(this.abortController.signal).catch((error) =>
+    // Interrupt deployment of activity/exe when rental gets finalized
+    this.finalizeAbortController.signal.addEventListener("abort", () => {
+      this.setupAbortController.abort(this.finalizeAbortController.signal.reason);
+    });
+
+    this.createExeUnit(this.setupAbortController.signal).catch((error) =>
       this.logger.debug(`Failed to automatically create the exe unit during resource rental initialization`, { error }),
     );
     // TODO: Listen to agreement events to know when it goes down due to provider closing it!
   }
 
   private async startStopAndFinalize(signalOrTimeout?: number | AbortSignal) {
+    const abortSignal = createAbortSignalFromTimeout(signalOrTimeout);
     try {
+      if (abortSignal.aborted) {
+        throw new GolemAbortError("The resource rental finalization has been aborted", abortSignal.reason);
+      }
+
       if (this.currentExeUnit) {
         await this.currentExeUnit.teardown();
       }
-      this.abortController.abort("The resource rental is finalizing");
+      this.finalizeAbortController.abort("The resource rental is finalizing");
       if (this.currentExeUnit?.activity) {
-        await this.activityModule.destroyActivity(this.currentExeUnit.activity);
+        await this.activityModule.destroyActivity(this.currentExeUnit.activity, abortSignal);
       }
       if ((await this.fetchAgreementState()) !== "Terminated") {
-        await this.marketModule.terminateAgreement(this.agreement);
+        await this.marketModule.terminateAgreement(this.agreement, undefined, abortSignal);
       }
       if (this.paymentProcess.isFinished()) {
         return;
       }
 
       this.logger.info("Waiting for payment process of agreement to finish", { agreementId: this.agreement.id });
-      const abortSignal = createAbortSignalFromTimeout(signalOrTimeout);
       await waitFor(() => this.paymentProcess.isFinished(), {
         abortSignal: abortSignal,
       }).catch((error) => {
@@ -92,6 +102,9 @@ export class ResourceRental {
       this.logger.info("Finalized payment process", { agreementId: this.agreement.id });
     } catch (error) {
       this.logger.error("Filed to finalize payment process", { agreementId: this.agreement.id, error });
+      if (abortSignal.aborted) {
+        throw new GolemAbortError("The resource rental finalization has been aborted", error);
+      }
       throw error;
     } finally {
       this.events.emit("finalized");
@@ -124,15 +137,15 @@ export class ResourceRental {
    * especially when the exe-unit is in the process of starting, deploying and preparing the environment (including setup function)
    */
   async getExeUnit(signalOrTimeout?: number | AbortSignal): Promise<ExeUnit> {
-    if (this.finalizePromise || this.abortController.signal.aborted) {
+    if (this.finalizePromise || this.finalizeAbortController.signal.aborted) {
       throw new GolemUserError("The resource rental is not active. It may have been aborted or finalized");
     }
     if (this.currentExeUnit !== null) {
       return this.currentExeUnit;
     }
     const abortController = new AbortController();
-    this.abortController.signal.addEventListener("abort", () =>
-      abortController.abort(this.abortController.signal.reason),
+    this.finalizeAbortController.signal.addEventListener("abort", () =>
+      abortController.abort(this.finalizeAbortController.signal.reason),
     );
     if (signalOrTimeout) {
       const abortSignal = createAbortSignalFromTimeout(signalOrTimeout);
@@ -149,10 +162,10 @@ export class ResourceRental {
    * Please note that if ResourceRental is left without ExeUnit for some time (default 90s)
    * the provider will terminate the Agreement and ResourceRental will be unuseble
    */
-  async destroyExeUnit() {
+  async destroyExeUnit(signalOrTimeout?: AbortSignal | number) {
     try {
       if (this.currentExeUnit !== null) {
-        await this.activityModule.destroyActivity(this.currentExeUnit.activity);
+        await this.activityModule.destroyActivity(this.currentExeUnit.activity, signalOrTimeout);
         this.currentExeUnit = null;
       } else {
         throw new GolemUserError(`There is no exe-unit to destroy.`);
@@ -164,14 +177,19 @@ export class ResourceRental {
     }
   }
 
-  async fetchAgreementState() {
-    return this.marketModule.fetchAgreement(this.agreement.id).then((agreement) => agreement.getState());
+  async fetchAgreementState(signalOrTimeout?: number | AbortSignal) {
+    return this.marketModule
+      .fetchAgreement(this.agreement.id, signalOrTimeout)
+      .then((agreement) => agreement.getState());
   }
 
   private async createExeUnit(abortSignal: AbortSignal) {
+    abortSignal.addEventListener("abort", () => {
+      this.setupAbortController.abort(abortSignal.reason);
+    });
     if (!this.exeUnitPromise) {
       this.exeUnitPromise = (async () => {
-        const activity = await this.activityModule.createActivity(this.agreement);
+        const activity = await this.activityModule.createActivity(this.agreement, abortSignal);
         this.currentExeUnit = await this.activityModule.createExeUnit(activity, {
           storageProvider: this.storageProvider,
           networkNode: this.resourceRentalOptions?.networkNode,

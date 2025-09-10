@@ -4,6 +4,8 @@ import { GolemInternalError } from "../../error/golem-error";
 import { IDemandRepository } from "../../../market/demand/demand";
 import { getMessageFromApiError } from "../../utils/apiErrorMessage";
 import { GolemMarketError, MarketErrorCode } from "../../../market";
+import { cancelYagnaApiCall } from "../../utils/cancel";
+import { createAbortSignalFromTimeout } from "../../utils";
 
 export class AgreementRepository implements IAgreementRepository {
   constructor(
@@ -11,10 +13,10 @@ export class AgreementRepository implements IAgreementRepository {
     private readonly demandRepo: IDemandRepository,
   ) {}
 
-  async getById(id: string): Promise<Agreement> {
+  async getById(id: string, signalOrTimeout?: AbortSignal | number): Promise<Agreement> {
     let dto;
     try {
-      dto = await this.api.getAgreement(id);
+      dto = await cancelYagnaApiCall(this.api.getAgreement(id), createAbortSignalFromTimeout(signalOrTimeout));
     } catch (error) {
       const message = getMessageFromApiError(error);
       throw new GolemMarketError(`Failed to get agreement: ${message}`, MarketErrorCode.CouldNotGetAgreement, error);

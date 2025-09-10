@@ -18,7 +18,7 @@ import {
   YagnaApi,
 } from "../shared/utils";
 import { Allocation, IPaymentApi } from "../payment";
-import { filter, map, Observable, OperatorFunction, switchMap, tap } from "rxjs";
+import { filter, map, Observable, OperatorFunction, retry, RetryConfig, switchMap, tap, timer } from "rxjs";
 import {
   OfferCounterProposal,
   OfferProposal,
@@ -147,15 +147,21 @@ export interface MarketModule {
    * - ya-ts-client "wait for approval"
    *
    * @param proposal
+   * @param signalOrTimeout - The timeout in milliseconds or an AbortSignal that will be used to cancel the operation
    *
    * @return Returns when the provider accepts the agreement, rejects otherwise. The resulting agreement is ready to create activities from.
    */
-  proposeAgreement(proposal: OfferProposal): Promise<Agreement>;
+  proposeAgreement(
+    proposal: OfferProposal,
+    agreementOptions?: AgreementOptions,
+    signalOrTimeout?: AbortSignal | number,
+  ): Promise<Agreement>;
 
   /**
    * @return The Agreement that has been terminated via Yagna
+   * @param signalOrTimeout - The timeout in milliseconds or an AbortSignal that will be used to cancel the operation
    */
-  terminateAgreement(agreement: Agreement, reason?: string): Promise<Agreement>;
+  terminateAgreement(agreement: Agreement, reason?: string, signalOrTimeout?: AbortSignal | number): Promise<Agreement>;
 
   /**
    * Acquire a proposal from the pool and sign an agreement with the provider. If signing the agreement fails,
@@ -197,6 +203,7 @@ export interface MarketModule {
     filter?: OfferProposalFilter;
     minProposalsBatchSize?: number;
     proposalsBatchReleaseTimeoutMs?: number;
+    retryConfig?: RetryConfig;
   }): Observable<OfferProposal>;
 
   /**
@@ -210,7 +217,7 @@ export interface MarketModule {
   /**
    * Fetch the most up-to-date agreement details from the yagna
    */
-  fetchAgreement(agreementId: string): Promise<Agreement>;
+  fetchAgreement(agreementId: string, signalOrTimeout?: AbortSignal | number): Promise<Agreement>;
 
   /**
    * Scan the market for offers that match the given demand specification.
@@ -403,7 +410,9 @@ export class MarketModuleImpl implements MarketModule {
               this.events.emit("demandSubscriptionRefreshed", {
                 demand,
               });
-              this.logger.info("Refreshed subscription for offer proposals with the new demand", { demand });
+              this.logger.info("Refreshed subscription for offer proposals with the new demand", {
+                demandId: demand.id,
+              });
             }
           })
           .catch((err) => {
@@ -456,8 +465,12 @@ export class MarketModuleImpl implements MarketModule {
     }
   }
 
-  async proposeAgreement(proposal: OfferProposal, options?: AgreementOptions): Promise<Agreement> {
-    const agreement = await this.marketApi.proposeAgreement(proposal, options);
+  async proposeAgreement(
+    proposal: OfferProposal,
+    options?: AgreementOptions,
+    signalOrTimeout?: AbortSignal | number,
+  ): Promise<Agreement> {
+    const agreement = await this.marketApi.proposeAgreement(proposal, options, signalOrTimeout);
 
     this.logger.info("Proposed and got approval for agreement", {
       agreementId: agreement.id,
@@ -467,8 +480,12 @@ export class MarketModuleImpl implements MarketModule {
     return agreement;
   }
 
-  async terminateAgreement(agreement: Agreement, reason?: string): Promise<Agreement> {
-    await this.marketApi.terminateAgreement(agreement, reason);
+  async terminateAgreement(
+    agreement: Agreement,
+    reason?: string,
+    signalOrTimeout?: AbortSignal | number,
+  ): Promise<Agreement> {
+    await this.marketApi.terminateAgreement(agreement, reason, signalOrTimeout);
 
     this.logger.info("Terminated agreement", {
       agreementId: agreement.id,
@@ -485,35 +502,62 @@ export class MarketModuleImpl implements MarketModule {
     filter?: OfferProposalFilter;
     minProposalsBatchSize?: number;
     proposalsBatchReleaseTimeoutMs?: number;
+    retryConfig?: RetryConfig;
   }): Observable<OfferProposal> {
-    return this.publishAndRefreshDemand(options.demandSpecification).pipe(
-      // For each fresh demand, start to watch the related market conversation events
-      switchMap((freshDemand) => this.collectMarketProposalEvents(freshDemand)),
-      // Select only events for proposal received
-      filter((event) => event.type === "ProposalReceived"),
-      // Convert event to proposal
-      map((event) => (event as OfferProposalReceivedEvent).proposal),
-      // We are interested only in Initial and Draft proposals, that are valid
-      filter((proposal) => (proposal.isInitial() || proposal.isDraft()) && proposal.isValid()),
-      // If they are accepted by the pricing criteria
-      filter((proposal) => this.filterProposalsByPricingOptions(options.pricing, proposal)),
-      // If they are accepted by the user filter
-      filter((proposal) => (options?.filter ? this.filterProposalsByUserFilter(options.filter, proposal) : true)),
-      // Batch initial proposals and  deduplicate them by provider key, pass-though proposals in other states
-      this.reduceInitialProposalsByProviderKey({
-        minProposalsBatchSize: options?.minProposalsBatchSize,
-        proposalsBatchReleaseTimeoutMs: options?.proposalsBatchReleaseTimeoutMs,
-      }),
-      // Tap-in negotiator logic and negotiate initial proposals
-      tap((proposal) => {
-        if (proposal.isInitial()) {
-          this.negotiateProposal(proposal, options.demandSpecification).catch((err) =>
-            this.logger.error("Failed to negotiate the proposal", err),
-          );
-        }
-      }),
-      // Continue only with drafts
-      filter((proposal) => proposal.isDraft()),
+    return (
+      this.publishAndRefreshDemand(options.demandSpecification)
+        .pipe(
+          // For each fresh demand, start to watch the related market conversation events
+          switchMap((freshDemand) => this.collectMarketProposalEvents(freshDemand)),
+          // Select only events for proposal received
+          filter((event) => event.type === "ProposalReceived"),
+          // Convert event to proposal
+          map((event) => (event as OfferProposalReceivedEvent).proposal),
+          // We are interested only in Initial and Draft proposals, that are valid
+          filter((proposal) => (proposal.isInitial() || proposal.isDraft()) && proposal.isValid()),
+          // If they are accepted by the pricing criteria
+          filter((proposal) => this.filterProposalsByPricingOptions(options.pricing, proposal)),
+          // If they are accepted by the user filter
+          filter((proposal) => (options?.filter ? this.filterProposalsByUserFilter(options.filter, proposal) : true)),
+          // Batch initial proposals and  deduplicate them by provider key, pass-though proposals in other states
+          this.reduceInitialProposalsByProviderKey({
+            minProposalsBatchSize: options?.minProposalsBatchSize,
+            proposalsBatchReleaseTimeoutMs: options?.proposalsBatchReleaseTimeoutMs,
+          }),
+          // Tap-in negotiator logic and negotiate initial proposals
+          tap((proposal) => {
+            if (proposal.isInitial()) {
+              this.negotiateProposal(proposal, options.demandSpecification).catch((err) =>
+                this.logger.error("Failed to negotiate the proposal", err),
+              );
+            }
+          }),
+          // Continue only with drafts
+          filter((proposal) => proposal.isDraft()),
+        )
+        // Chain pipes here because after 9 operators `.pipe` loses type inference
+        // (https://github.com/ReactiveX/rxjs/issues/4221#issuecomment-426774631)
+        .pipe(
+          tap({
+            error: (error) => {
+              this.logger.error("Encountered an error when collecting draft offer proposals", error);
+            },
+          }),
+          // Basic retry logic, since yagna can occasionally hit us with a 500
+          retry({
+            delay: (_, retryCount) => {
+              // Exponential backoff with 60 seconds cap
+              const retryDelay = Math.min(1000 * 2 ** (retryCount - 1), 60_000);
+              this.logger.info("Retrying draft offer proposal pipeline after delay", {
+                retryCount,
+                retryDelay,
+              });
+              return timer(retryDelay);
+            },
+            resetOnSuccess: true,
+            ...options.retryConfig,
+          }),
+        )
     );
   }
 
@@ -605,14 +649,27 @@ export class MarketModuleImpl implements MarketModule {
           minBatchSize: options?.minProposalsBatchSize,
           releaseTimeoutMs: options?.proposalsBatchReleaseTimeoutMs,
         });
-        const subscription = input.subscribe((proposal) => {
-          if (proposal.isInitial()) {
-            proposalsBatch
-              .addProposal(proposal)
-              .catch((err) => this.logger.error("Failed to add the initial proposal to the batch", err));
-          } else {
-            observer.next(proposal);
-          }
+        const subscription = input.subscribe({
+          next: (proposal) => {
+            try {
+              if (proposal.isInitial()) {
+                proposalsBatch
+                  .addProposal(proposal)
+                  .catch((err) => this.logger.error("Failed to add the initial proposal to the batch", err));
+              } else {
+                observer.next(proposal);
+              }
+            } catch (err) {
+              this.logger.error("Error processing proposal", err);
+              observer.error(err);
+            }
+          },
+          error: (err) => {
+            observer.error(err);
+          },
+          complete: () => {
+            isCancelled = true;
+          },
         });
 
         const batch = async () => {
@@ -665,8 +722,8 @@ export class MarketModuleImpl implements MarketModule {
     }
   }
 
-  async fetchAgreement(agreementId: string): Promise<Agreement> {
-    return this.marketApi.getAgreement(agreementId);
+  async fetchAgreement(agreementId: string, signalOrTimeout?: AbortSignal | number): Promise<Agreement> {
+    return this.marketApi.getAgreement(agreementId, signalOrTimeout);
   }
 
   /**

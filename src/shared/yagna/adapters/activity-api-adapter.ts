@@ -7,6 +7,8 @@ import { ExeScriptRequest } from "../../../activity/exe-script-executor";
 import { Observable } from "rxjs";
 import { StreamingBatchEvent } from "../../../activity/results";
 import { YagnaExeScriptObserver } from "../yagnaApi";
+import { cancelYagnaApiCall } from "../../utils/cancel";
+import { createAbortSignalFromTimeout } from "../../utils";
 
 export class ActivityApiAdapter implements IActivityApi {
   constructor(
@@ -20,11 +22,14 @@ export class ActivityApiAdapter implements IActivityApi {
     return this.activityRepo.getById(id);
   }
 
-  async createActivity(agreement: Agreement): Promise<Activity> {
+  async createActivity(agreement: Agreement, signalOrTimeout?: AbortSignal | number): Promise<Activity> {
     try {
-      const activityOrError = await this.control.createActivity({
-        agreementId: agreement.id,
-      });
+      const activityOrError = await cancelYagnaApiCall(
+        this.control.createActivity({
+          agreementId: agreement.id,
+        }),
+        createAbortSignalFromTimeout(signalOrTimeout),
+      );
 
       if (typeof activityOrError !== "object" || !("activityId" in activityOrError)) {
         // will be caught in the catch block and converted to GolemWorkError
@@ -44,9 +49,12 @@ export class ActivityApiAdapter implements IActivityApi {
     }
   }
 
-  async destroyActivity(activity: Activity): Promise<Activity> {
+  async destroyActivity(activity: Activity, signalOrTimeout?: AbortSignal | number): Promise<Activity> {
     try {
-      await this.control.destroyActivity(activity.id, 30);
+      await cancelYagnaApiCall(
+        this.control.destroyActivity(activity.id, 30),
+        createAbortSignalFromTimeout(signalOrTimeout),
+      );
       return this.activityRepo.getById(activity.id);
     } catch (error) {
       const message = getMessageFromApiError(error);

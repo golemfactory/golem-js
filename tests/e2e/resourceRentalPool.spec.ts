@@ -214,8 +214,9 @@ describe("ResourceRentalPool", () => {
     // wait for init and destroy the exe-unit created automatically on startup rental
     await rental.getExeUnit();
     await rental.destroyExeUnit();
+    // the call to `.createActivity` will be aborted
     await expect(rental.getExeUnit(10)).rejects.toThrow(
-      new GolemAbortError("Initializing of the exe-unit has been aborted due to a timeout"),
+      new GolemAbortError("Failed to create activity: Request aborted"),
     );
   });
 
@@ -237,7 +238,7 @@ describe("ResourceRentalPool", () => {
     const rental = await pool.acquire();
     await rental.getExeUnit();
     await expect(rental.stopAndFinalize(10)).rejects.toThrow(
-      new GolemAbortError("The finalization of payment process has been aborted"),
+      new GolemAbortError("The resource rental finalization has been aborted"),
     );
   });
 
@@ -248,7 +249,7 @@ describe("ResourceRentalPool", () => {
     await rental.getExeUnit();
     abortController.abort();
     await expect(rental.stopAndFinalize(abortController.signal)).rejects.toThrow(
-      new GolemAbortError("The finalization of payment process has been aborted"),
+      new GolemAbortError("The resource rental finalization has been aborted"),
     );
   });
 

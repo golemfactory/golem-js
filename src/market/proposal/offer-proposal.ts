@@ -15,7 +15,7 @@ export type PricingInfo = {
 
 export type ProposalState = "Initial" | "Draft" | "Rejected" | "Accepted" | "Expired";
 
-export type ProposalDTO = Partial<{
+export type ProposalDTO = {
   transferProtocol: string[];
   cpuBrand: string;
   cpuCapabilities: string[];
@@ -23,12 +23,14 @@ export type ProposalDTO = Partial<{
   cpuThreads: number;
   memory: number;
   storage: number;
-  publicNet: boolean;
   runtimeCapabilities: string[];
   runtimeName: string;
   runtimeVersion: string;
   state: ProposalState;
-}>;
+
+  /** Non-standardised property, we can't assume it will be always there */
+  publicNet?: boolean;
+};
 
 /**
  * Entity representing the offer presented by the Provider to the Requestor

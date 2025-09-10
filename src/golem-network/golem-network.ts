@@ -1,4 +1,4 @@
-import { anyAbortSignal, createAbortSignalFromTimeout, defaultLogger, isNode, Logger, YagnaApi } from "../shared/utils";
+import { anyAbortSignal, createAbortSignalFromTimeout, defaultLogger, Logger, YagnaApi } from "../shared/utils";
 import {
   Demand,
   DraftOfferProposalPool,
@@ -29,18 +29,15 @@ import { ProposalRepository } from "../shared/yagna/repository/proposal-reposito
 import { CacheService } from "../shared/cache/CacheService";
 import { DemandRepository } from "../shared/yagna/repository/demand-repository";
 import { IDemandRepository, OrderDemandOptions } from "../market/demand";
-import { GftpServerAdapter } from "../shared/storage/GftpServerAdapter";
-import {
-  GftpStorageProvider,
-  NullStorageProvider,
-  StorageProvider,
-  WebSocketBrowserStorageProvider,
-} from "../shared/storage";
+import { StorageServerAdapter } from "../shared/storage/StorageServerAdapter";
+import { GftpStorageProvider, NullStorageProvider, StorageProvider, WebSocketStorageProvider } from "../shared/storage";
 import { DataTransferProtocol } from "../shared/types";
 import { NetworkApiAdapter } from "../shared/yagna/adapters/network-api-adapter";
 import { IProposalRepository } from "../market/proposal";
 import { Subscription } from "rxjs";
-import { GolemUserError } from "../shared/error/golem-error";
+import { GolemConfigError, GolemUserError } from "../shared/error/golem-error";
+import { GolemPluginInitializer, GolemPluginOptions, GolemPluginRegistration } from "./plugin";
+import { ExpirationManager } from "../shared/expiration/ExpirationManager";
 
 /**
  * Instance of an object or a factory function that you can call `new` on.
@@ -70,6 +67,21 @@ function getFactory<
     return () => override;
   }
   return (...args) => new defaultFactory(...args);
+}
+
+interface MarketProposalExpirationOptions {
+  /**
+   * Number of milliseconds before a market proposal is considered stale and will be
+   * removed from all internal caches and DraftOfferProposalPools created by `oneOf` and `manyOf`.
+   * If unspecified it defaults to twice the demand refresh interval (`market.demandRefreshIntervalSec`) if
+   * that's specified or 30 minutes otherwise.
+   */
+  offerProposalTTLMs: number;
+
+  /**
+   * Interval at which to check for expired proposals in milliseconds. Defaults to 60s.
+   */
+  offerProposalCleanupIntervalMs: number;
 }
 
 export interface GolemNetworkOptions {
@@ -102,11 +114,11 @@ export interface GolemNetworkOptions {
    * This is where you can globally specify several options that determine how the SDK will
    * interact with the market.
    */
-  market?: Partial<MarketModuleOptions>;
+  market?: Partial<MarketModuleOptions> & Partial<MarketProposalExpirationOptions>;
 
   /**
    * Set the data transfer protocol to use for file transfers.
-   * Default is `gftp`.
+   * Default is `ws`.
    */
   dataTransferProtocol?: DataTransferProtocol;
 
@@ -163,6 +175,13 @@ export interface OneOfOptions {
   signalOrTimeout?: number | AbortSignal;
   setup?: ExeUnitOptions["setup"];
   teardown?: ExeUnitOptions["teardown"];
+
+  /**
+   * Define additional volumes ot be mounted when the activity is deployed
+   *
+   * @experimental The Provider has to run yagna 0.17.x or newer and offer `vm` runtime 0.5.x or newer
+   */
+  volumes?: ExeUnitOptions["volumes"];
 }
 
 export interface ManyOfOptions {
@@ -170,6 +189,13 @@ export interface ManyOfOptions {
   poolSize: PoolSize;
   setup?: ExeUnitOptions["setup"];
   teardown?: ExeUnitOptions["teardown"];
+
+  /**
+   * Define additional volumes ot be mounted when the activity is deployed
+   *
+   * @experimental The Provider has to run yagna 0.17.x or newer and offer `vm` runtime 0.5.x or newer
+   */
+  volumes?: ExeUnitOptions["volumes"];
 }
 
 /**
@@ -187,6 +213,7 @@ export type GolemServices = {
   demandRepository: IDemandRepository;
   fileServer: IFileServer;
   storageProvider: StorageProvider;
+  proposalExpirationManager: ExpirationManager;
 };
 
 /**
@@ -228,10 +255,11 @@ export class GolemNetwork {
   private cleanupTasks: (() => Promise<void> | void)[] = [];
 
   private identity?: string;
+  private registeredPlugins: GolemPluginRegistration[] = [];
 
   constructor(options: Partial<GolemNetworkOptions> = {}) {
     const optDefaults: GolemNetworkOptions = {
-      dataTransferProtocol: isNode ? "gftp" : "ws",
+      dataTransferProtocol: "ws",
     };
 
     this.options = {
@@ -257,8 +285,23 @@ export class GolemNetwork {
       const demandCache = new CacheService<Demand>();
       const proposalCache = new CacheService<OfferProposal>();
 
+      const proposalExpirationManager = new ExpirationManager({
+        logger: this.logger.child("expiration-manager"),
+        intervalMs: options.market?.offerProposalCleanupIntervalMs || 60 * 1000, // default 60s
+        timeToLiveMs:
+          options.market?.offerProposalTTLMs ||
+          (options?.market?.demandRefreshIntervalSec
+            ? options?.market?.demandRefreshIntervalSec * 1000 * 2
+            : 30 * 60 * 1000),
+      });
+
       const demandRepository = new DemandRepository(this.yagna.market, demandCache);
-      const proposalRepository = new ProposalRepository(this.yagna.market, this.yagna.identity, proposalCache);
+      const proposalRepository = new ProposalRepository(
+        this.yagna.market,
+        this.yagna.identity,
+        proposalCache,
+        proposalExpirationManager,
+      );
       const agreementRepository = new AgreementRepository(this.yagna.market, demandRepository);
 
       this.services = {
@@ -268,6 +311,7 @@ export class GolemNetwork {
         demandRepository,
         proposalCache,
         proposalRepository,
+        proposalExpirationManager,
         paymentApi:
           this.options.override?.paymentApi ||
           new PaymentApiAdapter(
@@ -288,7 +332,7 @@ export class GolemNetwork {
           this.options.override?.marketApi ||
           new MarketApiAdapter(this.yagna, agreementRepository, proposalRepository, demandRepository, this.logger),
         networkApi: this.options.override?.networkApi || new NetworkApiAdapter(this.yagna),
-        fileServer: this.options.override?.fileServer || new GftpServerAdapter(this.storageProvider),
+        fileServer: this.options.override?.fileServer || new StorageServerAdapter(this.storageProvider),
       };
       this.network = getFactory(NetworkModuleImpl, this.options.override?.network)(this.services);
       this.market = getFactory(MarketModuleImpl, this.options.override?.market)(
@@ -327,6 +371,8 @@ export class GolemNetwork {
       this.identity = (await this.yagna.connect()).identity;
       await this.services.paymentApi.connect();
       await this.storageProvider.init();
+      await this.connectPlugins();
+      this.services.proposalExpirationManager.start();
       this.events.emit("connected");
       this.hasConnection = true;
     } catch (err) {
@@ -348,6 +394,7 @@ export class GolemNetwork {
         .catch((err) =>
           this.logger.warn("Closing connections with yagna resulted with an error, it will be ignored", err),
         );
+      this.services.proposalExpirationManager.stopAndReset();
       this.services.proposalCache.flushAll();
       this.abortController = new AbortController();
     } catch (err) {
@@ -430,7 +477,12 @@ export class GolemNetwork {
    * @param options.setup - an optional function that is called as soon as the exe unit is ready
    * @param options.teardown - an optional function that is called before the exe unit is destroyed
    */
-  async oneOf({ order, setup, teardown, signalOrTimeout }: OneOfOptions): Promise<ResourceRental> {
+  async oneOf({ order, setup, teardown, signalOrTimeout, volumes }: OneOfOptions): Promise<ResourceRental> {
+    this.validateSettings({
+      order,
+      volumes,
+    });
+
     const { signal, cleanup: cleanupAbortSignals } = anyAbortSignal(
       createAbortSignalFromTimeout(signalOrTimeout),
       this.abortController.signal,
@@ -465,11 +517,13 @@ export class GolemNetwork {
         .releaseAllocation(allocation)
         .catch((err) => this.logger.error("Error while releasing allocation", err));
     };
+
     try {
       const proposalPool = new DraftOfferProposalPool({
         logger: this.logger,
         validateOfferProposal: order.market.offerProposalFilter,
         selectOfferProposal: order.market.offerProposalSelector,
+        expirationManager: this.services.proposalExpirationManager,
       });
 
       allocation = await this.getAllocationFromOrder({ order, maxAgreements: 1 });
@@ -499,7 +553,7 @@ export class GolemNetwork {
         payment: order.payment,
         activity: order.activity,
         networkNode,
-        exeUnit: { setup, teardown },
+        exeUnit: { setup, teardown, volumes },
       });
 
       // We managed to create the activity, no need to look for more agreement candidates
@@ -558,7 +612,12 @@ export class GolemNetwork {
    * @param options.setup - an optional function that is called as soon as the exe unit is ready
    * @param options.teardown - an optional function that is called before the exe unit is destroyed
    */
-  public async manyOf({ poolSize, order, setup, teardown }: ManyOfOptions): Promise<ResourceRentalPool> {
+  public async manyOf({ poolSize, order, setup, teardown, volumes }: ManyOfOptions): Promise<ResourceRentalPool> {
+    this.validateSettings({
+      order,
+      volumes,
+    });
+
     const signal = this.abortController.signal;
     let allocation: Allocation | undefined = undefined;
     let resourceRentalPool: ResourceRentalPool | undefined = undefined;
@@ -589,9 +648,10 @@ export class GolemNetwork {
         logger: this.logger,
         validateOfferProposal: order.market.offerProposalFilter,
         selectOfferProposal: order.market.offerProposalSelector,
+        expirationManager: this.services.proposalExpirationManager,
       });
 
-      const maxAgreements = typeof poolSize === "number" ? poolSize : poolSize?.max ?? poolSize?.min ?? 1;
+      const maxAgreements = typeof poolSize === "number" ? poolSize : (poolSize?.max ?? poolSize?.min ?? 1);
       allocation = await this.getAllocationFromOrder({ order, maxAgreements });
       signal.throwIfAborted();
 
@@ -612,7 +672,7 @@ export class GolemNetwork {
         resourceRentalOptions: {
           activity: order.activity,
           payment: order.payment,
-          exeUnit: { setup, teardown },
+          exeUnit: { setup, teardown, volumes },
         },
         agreementOptions: {
           expirationSec: rentSeconds,
@@ -666,21 +726,69 @@ export class GolemNetwork {
     return await this.network.removeNetwork(network);
   }
 
+  public use(pluginCallback: GolemPluginInitializer): void;
+  public use<TPOptions extends GolemPluginOptions>(
+    pluginCallback: GolemPluginInitializer<TPOptions>,
+    pluginOptions: TPOptions,
+  ): void;
+  public use<TPOptions extends GolemPluginOptions>(
+    pluginCallback: GolemPluginInitializer<TPOptions>,
+    pluginOptions?: TPOptions,
+  ): void {
+    this.registeredPlugins.push({
+      initializer: pluginCallback,
+      options: pluginOptions,
+    });
+  }
+
   private createStorageProvider(): StorageProvider {
     if (typeof this.options.dataTransferProtocol === "string") {
       switch (this.options.dataTransferProtocol) {
+        case "gftp":
+          return new GftpStorageProvider(this.logger);
         case "ws":
-          return new WebSocketBrowserStorageProvider(this.yagna, {
+          return new WebSocketStorageProvider(this.yagna, {
             logger: this.logger,
           });
-        case "gftp":
         default:
-          return new GftpStorageProvider(this.logger);
+          throw new GolemConfigError(
+            `Unsupported data transfer protocol ${this.options.dataTransferProtocol}. Supported protocols are "gftp" and "ws"`,
+          );
       }
     } else if (this.options.dataTransferProtocol !== undefined) {
       return this.options.dataTransferProtocol;
     } else {
       return new NullStorageProvider();
+    }
+  }
+
+  private async connectPlugins() {
+    this.logger.debug("Started plugin initialization");
+    for (const plugin of this.registeredPlugins) {
+      const cleanup = await plugin.initializer(this, plugin.options);
+      if (cleanup) {
+        this.cleanupTasks.push(cleanup);
+      }
+    }
+    this.logger.debug("Finished plugin initialization");
+  }
+
+  /**
+   * A helper method used to check if the user provided settings and settings are reasonable
+   * @param settings
+   * @private
+   */
+  private validateSettings(settings: { volumes?: ExeUnitOptions["volumes"]; order: MarketOrderSpec }) {
+    // Rule: If user specifies volumes and the min storage size, then the min storage has to be at least of the largest volume size
+    if (settings.volumes && settings.order.demand.workload?.minStorageGib !== undefined) {
+      const largestVolumeSizeGib = Math.max(...Object.values(settings.volumes).map((spec) => spec.sizeGib));
+      if (settings.order.demand.workload.minStorageGib < largestVolumeSizeGib) {
+        throw new GolemUserError("Your minStorageGib requirement is below your expected largest volume size.");
+      }
+    }
+    // Rule: Require minStorageGib settings for volume users to ensure that they will get suitable providers from the market
+    if (settings.volumes && settings.order.demand.workload?.minStorageGib === undefined) {
+      throw new GolemUserError("You have specified volumes but did not specify a minStorageGib requirement.");
     }
   }
 }

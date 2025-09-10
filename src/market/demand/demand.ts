@@ -116,4 +116,24 @@ export class Demand {
   get paymentPlatform(): string {
     return this.details.paymentPlatform;
   }
+
+  /**
+   * Demand expiration as a timestamp or null if it's not present in the properties object
+   */
+  get expiration(): number | null {
+    const expirationPropertyValue = this.details.prototype.properties.find(
+      (property) => property.key === "golem.srv.comp.expiration",
+    );
+    if (!expirationPropertyValue) {
+      return null;
+    }
+    if (typeof expirationPropertyValue.value === "number") {
+      return expirationPropertyValue.value;
+    }
+    const valuesAsNumber = Number(expirationPropertyValue.value);
+    if (Number.isNaN(valuesAsNumber)) {
+      return null;
+    }
+    return valuesAsNumber;
+  }
 }
