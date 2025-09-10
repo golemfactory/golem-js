@@ -25,6 +25,13 @@ const order: MarketOrderSpec = Object.freeze({
     },
   },
 } as const);
+
+const identity = {
+  identity: "0x0123456789",
+  role: "test-role",
+  name: "test-name",
+};
+
 const mockMarket = mock(MarketModuleImpl);
 const mockPayment = mock(PaymentModuleImpl);
 const mockActivity = mock(ActivityModuleImpl);
@@ -54,6 +61,7 @@ afterEach(() => {
 beforeEach(() => {
   when(mockStorageProvider.close()).thenResolve();
   when(mockYagna.disconnect()).thenResolve();
+  when(mockYagna.connect()).thenResolve(identity);
 });
 
 function getGolemNetwork() {
