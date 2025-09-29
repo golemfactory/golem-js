@@ -143,18 +143,11 @@ export class ResourceRental {
     if (this.currentExeUnit !== null) {
       return this.currentExeUnit;
     }
-    const abortController = new AbortController();
-    this.finalizeAbortController.signal.addEventListener("abort", () =>
-      abortController.abort(this.finalizeAbortController.signal.reason),
-    );
-    if (signalOrTimeout) {
-      const abortSignal = createAbortSignalFromTimeout(signalOrTimeout);
-      abortSignal.addEventListener("abort", () => abortController.abort(abortSignal.reason));
-      if (signalOrTimeout instanceof AbortSignal && signalOrTimeout.aborted) {
-        abortController.abort(signalOrTimeout.reason);
-      }
+    const signal = createAbortSignalFromTimeout(signalOrTimeout);
+    if (signal.aborted) {
+      throw new GolemAbortError("Initializing of the exe-unit has been aborted", signal.reason);
     }
-    return this.createExeUnit(abortController.signal);
+    return this.createExeUnit(signal);
   }
 
   /**
