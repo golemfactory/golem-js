@@ -220,6 +220,19 @@ describe("ResourceRentalPool", () => {
     );
   });
 
+  it("should not interrupt running commands on the exe-unit when aborting the setup signal after setup is done", async () => {
+    const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { poolSize: 1 });
+    const rental = await pool.acquire();
+    const abortController = new AbortController();
+    const exeUnit = await rental.getExeUnit(abortController.signal);
+    const runPromise = exeUnit.run("sleep 5 && echo Hello World");
+    // wait 2 seconds and abort the signal - the setup is already done so it should not affect the running command
+    await new Promise((res) => setTimeout(res, 2000));
+    abortController.abort();
+    const result = await runPromise;
+    expect(result.stdout?.toString().trim()).toEqual("Hello World");
+  });
+
   it("should abort getting the newly created exe-unit by signal", async () => {
     const pool = glm.rental.createResourceRentalPool(proposalPool, allocation, { poolSize: 1 });
     const abortController = new AbortController();
