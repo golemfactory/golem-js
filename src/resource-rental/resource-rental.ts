@@ -194,7 +194,8 @@ export class ResourceRental {
           storageProvider: this.storageProvider,
           networkNode: this.resourceRentalOptions?.networkNode,
           executionOptions: this.resourceRentalOptions?.activity,
-          signalOrTimeout: abortSignal,
+          signalOrTimeout: this.finalizeAbortController.signal,
+          setupSignalOrTimeout: this.setupAbortController.signal,
           ...this.resourceRentalOptions?.exeUnit,
         });
         this.events.emit("exeUnitCreated", activity);

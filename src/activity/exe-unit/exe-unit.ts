@@ -45,7 +45,17 @@ export interface ExeUnitOptions {
   /** this function is called before the exe unit is destroyed */
   teardown?: LifecycleFunction;
   executionOptions?: ExecutionOptions;
+  /**
+   * Abort signal or timeout for the entire lifecycle of the exe unit.
+   * If this signal is aborted or timeout is reached at any point, all ongoing operations
+   * will be stopped, no matter if it's activity deployment, setup, command execution or teardown.
+   */
   signalOrTimeout?: number | AbortSignal;
+  /**
+   * Abort signal or timeout for the setup phase only.
+   * If this signal is aborted or timeout is reached after the setup phase is completed, it will be ignored.
+   */
+  setupSignalOrTimeout?: number | AbortSignal;
   volumes?: Record<string, VolumeSpec>;
 }
 
@@ -115,21 +125,41 @@ export class ExeUnit {
    * This function initializes the exe unit by deploying the image to the remote machine
    * and preparing and running the environment.
    * This process also includes running setup function if the user has defined it
+   *
+   * @param signalOrTimeout - Abort signal or timeout for the setup phase only.
+   * If this signal is aborted or timeout is reached after the setup phase is completed, it will be ignored.
    */
-  async setup(): Promise<Result[] | void> {
+  async setup(signalOrTimeout?: number | AbortSignal): Promise<Result[] | void> {
+    const setupSignal = createAbortSignalFromTimeout(signalOrTimeout);
+    const throwIfAborted = () => {
+      if (this.abortSignal.aborted) {
+        throw new GolemAbortError("ExeUnit has been aborted", this.abortSignal.reason);
+      }
+      if (setupSignal.aborted) {
+        throw setupSignal.reason.name === "TimeoutError"
+          ? new GolemTimeoutError("ExeUnit setup has been aborted due to a timeout", setupSignal.reason)
+          : new GolemAbortError("ExeUnit setup has been aborted", setupSignal.reason);
+      }
+    };
     try {
+      throwIfAborted();
       let state = await this.fetchState();
+      throwIfAborted();
+
       if (state === ActivityStateEnum.Ready) {
         await this.setupActivity();
         return;
       }
 
       if (state === ActivityStateEnum.Initialized) {
-        await this.deployActivity();
+        await this.deployActivity(setupSignal);
+        throwIfAborted();
       }
 
       await sleep(1000, true);
+      throwIfAborted();
       state = await this.fetchState();
+      throwIfAborted();
 
       if (state !== ActivityStateEnum.Ready) {
         throw new GolemWorkError(
@@ -141,6 +171,7 @@ export class ExeUnit {
         );
       }
       await this.setupActivity();
+      throwIfAborted();
     } catch (error) {
       if (this.abortSignal.aborted) {
         throw this.abortSignal.reason.name === "TimeoutError"
@@ -164,7 +195,7 @@ export class ExeUnit {
     }
   }
 
-  private async deployActivity() {
+  private async deployActivity(setupAbortSignal?: AbortSignal) {
     try {
       const executionMetadata = await this.executor.execute(
         new Script([
@@ -175,7 +206,7 @@ export class ExeUnit {
           new Start(),
         ]).getExeScriptRequest(),
       );
-      const result$ = this.executor.getResultsObservable(executionMetadata);
+      const result$ = this.executor.getResultsObservable(executionMetadata, false, setupAbortSignal);
       // if any result is an error, throw an error
       await lastValueFrom(
         result$.pipe(
