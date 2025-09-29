@@ -101,7 +101,7 @@ jobs:
         uses: ./.github/actions/prepare-tests
 
       - name: Start the E2E test
-        run: docker exec -e HOLESKY_MAX_FEE_PER_GAS=51 -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm run test:e2e"
+        run: docker exec -t docker-requestor-1 /bin/sh -c "cd /golem-js && npm run test:e2e"
 
       - name: Upload E2E reports
         uses: actions/upload-artifact@v4
