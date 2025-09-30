@@ -301,7 +301,7 @@ export class ActivityModuleImpl implements ActivityModule {
     this.logger.debug("Initializing the exe-unit for activity", { activityId: activity.id });
 
     try {
-      await exe.setup();
+      await exe.setup(options?.setupSignalOrTimeout);
       const refreshedActivity = await this.refreshActivity(activity).catch(() => {
         this.logger.warn("Failed to refresh activity after work context initialization", { activityId: activity.id });
         return activity;
