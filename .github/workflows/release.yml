@@ -15,25 +15,25 @@ on:
   workflow_dispatch:
     inputs:
       payment_network:
-        description: "Payment network (hoodi, goerli, mainnet, mumbai, polygon, rinkeby)"
+        description: "Payment network (hoodi, amoy, polygon)"
         required: false
         default: "hoodi"
       provider_version:
         description: "Provider version (e.g., v0.15.0 or pre-rel-v0.15.1)"
         required: false
-        default: "v0.15.2"
+        default: "pre-rel-v0.17.1-hoodi"
       requestor_version:
         description: "Requestor version (e.g., v0.15.0 or pre-rel-v0.15.1)"
         required: false
-        default: "v0.15.2"
+        default: "pre-rel-v0.17.1-hoodi"
       provider_wasi_version:
         description: "Provider WASI version (e.g., v0.2.2)"
         required: false
         default: "v0.2.2"
       provider_vm_version:
-        description: "Provider VM version (e.g., v0.3.0)"
+        description: "Provider VM version (e.g., v0.5.3)"
         required: false
-        default: "v0.3.0"
+        default: "v0.5.3"
       log_level:
         description: "The log level to force on golem-js pino-logger"
         required: false
