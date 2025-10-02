@@ -57,13 +57,13 @@ describe("Market module", () => {
     it("should build a demand", async () => {
       const allocation = {
         id: "allocation-id",
-        paymentPlatform: "erc20-holesky-tglm",
+        paymentPlatform: "erc20-hoodi-tglm",
       } as Allocation;
 
       when(mockMarketApiAdapter.getPaymentRelatedDemandDecorations("allocation-id")).thenResolve({
         properties: [
           {
-            key: "golem.com.payment.platform.erc20-holesky-tglm.address",
+            key: "golem.com.payment.platform.erc20-hoodi-tglm.address",
             value: "0x123",
           },
           {
@@ -72,7 +72,7 @@ describe("Market module", () => {
           },
         ],
         constraints: [
-          "(golem.com.payment.platform.erc20-holesky-tglm.address=*)",
+          "(golem.com.payment.platform.erc20-hoodi-tglm.address=*)",
           "(golem.com.payment.protocol.version>1)",
         ],
       });
@@ -108,7 +108,7 @@ describe("Market module", () => {
         "(golem.inf.storage.gib>=2)",
         "(golem.inf.cpu.cores>=1)",
         "(golem.inf.cpu.threads>=1)",
-        "(golem.com.payment.platform.erc20-holesky-tglm.address=*)",
+        "(golem.com.payment.platform.erc20-hoodi-tglm.address=*)",
         "(golem.com.payment.protocol.version>1)",
       ];
 
@@ -146,7 +146,7 @@ describe("Market module", () => {
           value: 42,
         },
         {
-          key: "golem.com.payment.platform.erc20-holesky-tglm.address",
+          key: "golem.com.payment.platform.erc20-hoodi-tglm.address",
           value: "0x123",
         },
         {
@@ -276,7 +276,7 @@ describe("Market module", () => {
           properties: [],
           constraints: [],
         },
-        "erc20-holesky-tglm",
+        "erc20-hoodi-tglm",
       );
 
       const providerInfo: ProviderInfo = {
@@ -364,7 +364,7 @@ describe("Market module", () => {
           properties: [],
           constraints: [],
         },
-        "erc20-holesky-tglm",
+        "erc20-hoodi-tglm",
       );
 
       const providerInfo: ProviderInfo = {
@@ -436,7 +436,7 @@ describe("Market module", () => {
           properties: [],
           constraints: [],
         },
-        "erc20-holesky-tglm",
+        "erc20-hoodi-tglm",
       );
 
       const mockProposal = mock(OfferProposal);

@@ -71,7 +71,7 @@ services:
       - YAGNA_APPKEY=try_golem
       - PAYMENT_NETWORK=${PAYMENT_NETWORK}
       - YA_NET_BIND_URL=udp://0.0.0.0:0
-      - HOLESKY_MAX_FEE_PER_GAS=51
+      - HOODI_MAX_FEE_PER_GAS=51
       # - YA_NET_RELAY_HOST=63.34.24.27:7477
     healthcheck:
       test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://localhost:7465 | grep -q 401"]

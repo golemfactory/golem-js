@@ -1,13 +1,13 @@
 import { Address, createPublicClient, decodeFunctionData, Hex, http, Log, parseAbi } from "viem";
 import config from "./config.js";
-import { holesky } from "viem/chains";
+import { hoodi } from "viem/chains";
 import { readFile } from "fs/promises";
 import chalk from "chalk";
 
 const abiLock = JSON.parse(await readFile("./contracts/lockAbi.json", "utf8"));
 
 const publicClient = createPublicClient({
-  chain: holesky,
+  chain: hoodi,
   transport: http(config.rpcUrl),
 });
 
@@ -55,7 +55,7 @@ async function startWatchingContractTransactions(address: string) {
       "event DepositTerminated(uint256 indexed id, address spender)",
       "event DepositTransfer(uint256 indexed id, address spender, address recipient, uint128 amount)",
     ]),
-    address: <Address>config.lockPaymentContract.holeskyAddress,
+    address: <Address>config.lockPaymentContract.hoodiAddress,
   });
   return {
     stopWatchingContractTransactions: unwatch,

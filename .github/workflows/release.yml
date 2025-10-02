@@ -15,9 +15,9 @@ on:
   workflow_dispatch:
     inputs:
       payment_network:
-        description: "Payment network (holesky, goerli, mainnet, mumbai, polygon, rinkeby)"
+        description: "Payment network (hoodi, goerli, mainnet, mumbai, polygon, rinkeby)"
         required: false
-        default: "holesky"
+        default: "hoodi"
       provider_version:
         description: "Provider version (e.g., v0.15.0 or pre-rel-v0.15.1)"
         required: false
@@ -48,7 +48,7 @@ env:
   REQUESTOR_VERSION: ${{ github.event.inputs.requestor_version || 'v0.15.2' }}
   PROVIDER_WASI_VERSION: ${{ github.event.inputs.provider_wasi_version || 'v0.2.2' }}
   PROVIDER_VM_VERSION: ${{ github.event.inputs.provider_vm_version || 'v0.3.0' }}
-  PAYMENT_NETWORK: ${{ github.event.inputs.payment_network || 'holesky' }}
+  PAYMENT_NETWORK: ${{ github.event.inputs.payment_network || 'hoodi' }}
   GOLEM_PINO_LOG_LEVEL: ${{ github.event.inputs.log_level || 'info' }}
 
 jobs:

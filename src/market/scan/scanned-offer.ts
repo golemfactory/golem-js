@@ -144,7 +144,7 @@ export class ScannedOffer {
    * ```json
    * {
    *  "erc20-polygon-glm": "0x8737beea5668595fda9d50e85cae9cad10b4c980",
-   *  "erc20-holesky-tglm:" "0x8737beea5668595fda9d50e85cae9cad10b4c980",
+   *  "erc20-hoodi-tglm:" "0x8737beea5668595fda9d50e85cae9cad10b4c980",
    * }
    * ```
    */
