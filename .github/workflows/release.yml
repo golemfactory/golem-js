@@ -44,10 +44,10 @@ permissions:
   contents: read # for checkout
 
 env:
-  PROVIDER_VERSION: ${{ github.event.inputs.provider_version || 'v0.15.2' }}
-  REQUESTOR_VERSION: ${{ github.event.inputs.requestor_version || 'v0.15.2' }}
+  PROVIDER_VERSION: ${{ github.event.inputs.provider_version || 'pre-rel-v0.17.1-hoodi' }}
+  REQUESTOR_VERSION: ${{ github.event.inputs.requestor_version || 'pre-rel-v0.17.1-hoodi' }}
   PROVIDER_WASI_VERSION: ${{ github.event.inputs.provider_wasi_version || 'v0.2.2' }}
-  PROVIDER_VM_VERSION: ${{ github.event.inputs.provider_vm_version || 'v0.3.0' }}
+  PROVIDER_VM_VERSION: ${{ github.event.inputs.provider_vm_version || 'v0.5.3' }}
   PAYMENT_NETWORK: ${{ github.event.inputs.payment_network || 'hoodi' }}
   GOLEM_PINO_LOG_LEVEL: ${{ github.event.inputs.log_level || 'info' }}
 
