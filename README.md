@@ -117,13 +117,13 @@ network.
 ```bash
 # IN SEPARATE TERMINAL (if not daemonized)
 # Initialize your requestor
-yagna payment init --sender --network holesky
+yagna payment init --sender --network hoodi
 
 # Request funds on the test network
-yagna payment fund --network holesky
+yagna payment fund --network hoodi
 
 # Check the status of the funds
-yagna payment status --network holesky
+yagna payment status --network hoodi
 ```
 
 ### Obtain an `app-key` to use with SDK

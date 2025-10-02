@@ -15,7 +15,7 @@ const agreementData: MarketApi.AgreementDTO = {
     providerId: "provider-id",
     properties: {
       "golem.node.id.name": "provider-name",
-      "golem.com.payment.platform.erc20-holesky-tglm.address": "0xProviderWallet",
+      "golem.com.payment.platform.erc20-hoodi-tglm.address": "0xProviderWallet",
     },
     constraints: "",
     timestamp: "2024-01-01T00:00:00.000Z",
@@ -32,7 +32,7 @@ const demand = new Demand(
       constraints: [],
       properties: [],
     },
-    "erc20-holesky-tglm",
+    "erc20-hoodi-tglm",
   ),
 );
 

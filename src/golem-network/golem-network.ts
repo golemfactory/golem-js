@@ -104,7 +104,7 @@ export interface GolemNetworkOptions {
    * Set payment-related options.
    *
    * This is where you can specify the network, payment driver and more.
-   * By default, the network is set to the `holesky` test network.
+   * By default, the network is set to the `hoodi` test network.
    */
   payment?: Partial<PaymentModuleOptions>;
 

@@ -11,7 +11,7 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
     }),
     payment: {
       driver: "erc20",
-      network: "holesky",
+      network: "hoodi",
     },
   });
 

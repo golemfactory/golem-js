@@ -6,7 +6,7 @@ describe("Scanned Offer", () => {
       offerId: "example-id",
       properties: {
         "golem.com.payment.platform.erc20-polygon-glm.address": "0xPolygonAddress",
-        "golem.com.payment.platform.erc20-holesky-tglm.address": "0xHoleskyAddress",
+        "golem.com.payment.platform.erc20-hoodi-tglm.address": "0xHoodiAddress",
         "golem.com.payment.platform.nonsense": "0xNonsense",
         "some.other.prop": "with-a-value",
       },
@@ -16,7 +16,7 @@ describe("Scanned Offer", () => {
     });
 
     expect(offer.paymentPlatformAddresses["erc20-polygon-glm"]).toEqual("0xPolygonAddress");
-    expect(offer.paymentPlatformAddresses["erc20-holesky-tglm"]).toEqual("0xHoleskyAddress");
+    expect(offer.paymentPlatformAddresses["erc20-hoodi-tglm"]).toEqual("0xHoodiAddress");
     expect(Object.entries(offer.paymentPlatformAddresses).length).toEqual(2);
   });
 
@@ -34,7 +34,7 @@ describe("Scanned Offer", () => {
       offerId: "example-id",
       properties: {
         "golem.com.payment.platform.erc20-polygon-glm.address": "0xPolygonAddress",
-        "golem.com.payment.platform.erc20-holesky-tglm.address": "0xHoleskyAddress",
+        "golem.com.payment.platform.erc20-hoodi-tglm.address": "0xHoodiAddress",
         "golem.com.payment.platform.nonsense": "0xNonsense",
         "golem.com.usage.vector": ["golem.usage.cpu_sec", "golem.usage.duration_sec"],
         "golem.com.pricing.model.linear.coeffs": [cpuPerSec, envPerSec, startPrice],
