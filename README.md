@@ -92,7 +92,7 @@ yarn add @golem-sdk/golem-js
 ## Supported environments
 
 The SDK is designed to work with LTS versions of Node (starting from 18)
-and with browsers. The minimum supported `yagna` version is `0.15.2`.
+and with browsers. The minimum supported `yagna` version is `0.17.1`.
 
 ## Getting started with Golem Network
 
