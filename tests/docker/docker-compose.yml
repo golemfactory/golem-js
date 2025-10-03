@@ -69,7 +69,7 @@ services:
       - GSB_URL=tcp://0.0.0.0:7464
       - YAGNA_SUBNET=${YAGNA_SUBNET:-golemjstest}
       - YAGNA_APPKEY=try_golem
-      - PAYMENT_NETWORK=${PAYMENT_NETWORK}
+      - PAYMENT_NETWORK=${PAYMENT_NETWORK:-hoodi}
       - YA_NET_BIND_URL=udp://0.0.0.0:0
       - YA_NET_RELAY_HOST=polygongas.org:7477
     healthcheck:
