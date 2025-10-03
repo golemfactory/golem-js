@@ -21,11 +21,11 @@ on:
       provider_version:
         description: "Provider version (e.g., v0.15.0 or pre-rel-v0.15.1)"
         required: false
-        default: "pre-rel-v0.17.1-hoodi3"
+        default: "v0.17.4"
       requestor_version:
         description: "Requestor version (e.g., v0.15.0 or pre-rel-v0.15.1)"
         required: false
-        default: "pre-rel-v0.17.1-hoodi3"
+        default: "v0.17.4"
       provider_wasi_version:
         description: "Provider WASI version (e.g., v0.2.2)"
         required: false
@@ -44,8 +44,8 @@ permissions:
   contents: read # for checkout
 
 env:
-  PROVIDER_VERSION: ${{ github.event.inputs.provider_version || 'pre-rel-v0.17.1-hoodi3' }}
-  REQUESTOR_VERSION: ${{ github.event.inputs.requestor_version || 'pre-rel-v0.17.1-hoodi3' }}
+  PROVIDER_VERSION: ${{ github.event.inputs.provider_version || 'v0.17.4' }}
+  REQUESTOR_VERSION: ${{ github.event.inputs.requestor_version || 'v0.17.4' }}
   PROVIDER_WASI_VERSION: ${{ github.event.inputs.provider_wasi_version || 'v0.2.2' }}
   PROVIDER_VM_VERSION: ${{ github.event.inputs.provider_vm_version || 'v0.5.3' }}
   PAYMENT_NETWORK: ${{ github.event.inputs.payment_network || 'hoodi' }}
@@ -126,6 +126,7 @@ jobs:
 
   release:
     name: Release the SDK to NPM and GitHub
+    needs: [run-e2e-tests, run-examples-tests, run-cypress-tests]
     runs-on: ubuntu-latest
     permissions:
       contents: write # to be able to publish a GitHub release
