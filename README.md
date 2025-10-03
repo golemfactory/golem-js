@@ -91,7 +91,7 @@ yarn add @golem-sdk/golem-js
 ## Supported environments
 
 The SDK is designed to work with LTS versions of Node (20.x and above).
-and with browsers. The minimum supported `yagna` version is `0.15.2`, but it's highly recommended to use the latest stable version.
+and with browsers. The minimum supported `yagna` version is `0.15.2`, but if you want to use the `hoodi` testnet (since `holesky` is no longer available), you should use at least version `0.17.4`.
 
 ## Getting started with Golem Network
 
