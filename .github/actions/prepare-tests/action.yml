@@ -44,7 +44,7 @@ runs:
       run: |
         sleep 10
         echo "Going to fund the requestor"
-        docker exec -t docker-requestor-1 /bin/sh -c "/golem-js/tests/docker/fundRequestor.sh"
+        docker exec -e HOODI_MAX_FEE_PER_GAS=51 -t docker-requestor-1 /bin/sh -c "/golem-js/tests/docker/fundRequestor.sh"
         echo "Successfully funded the requestor"
 
     - name: Install and build the SDK in the docker container

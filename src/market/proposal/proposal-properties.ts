@@ -78,7 +78,7 @@ export type StandardCommercialProps = {
   /** @example "erc20-polygon-glm" */
   "golem.com.payment.chosen-platform": string;
   "golem.com.payment.platform.erc20-polygon-glm.address"?: string;
-  "golem.com.payment.platform.erc20-holesky-tglm.address"?: string;
+  "golem.com.payment.platform.erc20-hoodi-tglm.address"?: string;
   "golem.com.payment.platform.erc20-mumbai-tglm.address"?: string;
   "golem.com.payment.protocol.version": number;
   /** @example payu */

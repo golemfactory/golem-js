@@ -20,8 +20,8 @@ import { GolemInternalError } from "../shared/error/golem-error";
 export interface PaymentModuleOptions {
   /**
    * Network used to facilitate the payment.
-   * (for example: "mainnet", "holesky")
-   * @default holesky
+   * (for example: "mainnet", "hoodi")
+   * @default hoodi
    */
   network?: string;
   /**
