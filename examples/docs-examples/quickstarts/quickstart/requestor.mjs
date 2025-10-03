@@ -27,9 +27,9 @@ const order = {
     }),
     api: { key: "try_golem" },
     // Optional: select payment network.
-    // Testnets:  holesky (default), sepolia, rinkeby, amoy
+    // Testnets:  hoodi (default), sepolia, rinkeby, amoy
     // Mainnets:  mainnet, polygon
-    // payment: { network: "holesky" },
+    // payment: { network: "hoodi" },
   });
 
   try {

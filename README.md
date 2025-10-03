@@ -92,7 +92,7 @@ yarn add @golem-sdk/golem-js
 ## Supported environments
 
 The SDK is designed to work with LTS versions of Node (starting from 18)
-and with browsers. The minimum supported `yagna` version is `0.15.2`.
+and with browsers. The minimum supported `yagna` version is `pre-rel-0.17.1-hoodi3`.
 
 ## Getting started with Golem Network
 
@@ -117,13 +117,13 @@ network.
 ```bash
 # IN SEPARATE TERMINAL (if not daemonized)
 # Initialize your requestor
-yagna payment init --sender --network holesky
+yagna payment init --sender --network hoodi
 
 # Request funds on the test network
-yagna payment fund --network holesky
+yagna payment fund --network hoodi
 
 # Check the status of the funds
-yagna payment status --network holesky
+yagna payment status --network hoodi
 ```
 
 ### Obtain an `app-key` to use with SDK

@@ -21,7 +21,7 @@ describe("Allocation", () => {
     it("should create allocation", async () => {
       const allocation = new Allocation({
         address: "0xSomeAddress",
-        paymentPlatform: "erc20-holesky-tglm",
+        paymentPlatform: "erc20-hoodi-tglm",
         allocationId: "allocation-id",
         makeDeposit: false,
         remainingAmount: "1.0",
