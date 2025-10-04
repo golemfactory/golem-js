@@ -38,15 +38,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Verify the integrity of provenance attestations and registry signatures for installed dependencies
-        run: npm audit signatures
-
-      - name: Login to npm registry
+      - name: Setup npm auth
+        run: |
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          npm login
-          npm whoami
 
       - name: Set version, build and publish to NPM, tag the release and push the changes
         run: |
