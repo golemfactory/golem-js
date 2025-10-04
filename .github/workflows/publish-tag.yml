@@ -1,4 +1,4 @@
-name: Publish custom tag
+name: Publish Test Version
 
 on:
   # Allows triggering the workflow manually
