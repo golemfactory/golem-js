@@ -1,4 +1,4 @@
-name: Release Pipeline
+name: Publish custom tag
 
 on:
   # Allows triggering the workflow manually
