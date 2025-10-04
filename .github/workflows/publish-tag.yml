@@ -6,8 +6,12 @@ on:
     inputs:
       version:
         description: "Build and publish to NPM"
-        required: false
-        default: "v0.17.4-test.1"
+        required: true
+        default: "0.17.4"
+      tag:
+        description: "Tag to apply to the release"
+        required: true
+        default: "test.1"
 
 
 # We're going to interact with GH from the pipelines, so we need to get some permissions
@@ -44,10 +48,10 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Set version to ${{ github.event.inputs.version }}
+      - name: Set version to ${{ github.event.inputs.version }}-${{ github.event.inputs.tag }}
         run: |
           set -x
-          npm version ${{ github.event.inputs.version }} --no-git-tag-version
+          npm version ${{ github.event.inputs.version }}-${{ github.event.inputs.tag }} --no-git-tag-version
 
       - name: Build the SDK for release
         run: |
@@ -55,4 +59,4 @@ jobs:
 
       - name: Publish to NPM - ${{ github.event.inputs.version }}
         run: |
-          npm publish
+          npm publish --tag ${{ github.event.inputs.tag }}
