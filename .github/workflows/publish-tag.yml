@@ -1,0 +1,66 @@
+name: Release Pipeline
+
+on:
+  # Allows triggering the workflow manually
+  workflow_dispatch:
+    inputs:
+      provider_version:
+        description: "Build and publish to NPM"
+        required: false
+        default: "v0.17.4-test.1"
+
+
+# We're going to interact with GH from the pipelines, so we need to get some permissions
+permissions:
+  contents: read # for checkout
+
+jobs:
+  release:
+    name: Release the SDK to NPM and GitHub
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # to be able to publish a GitHub release
+      issues: write # to be able to comment on released issues
+      pull-requests: write # to be able to comment on released pull requests
+      id-token: write # to enable use of OIDC for npm provenance
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v4
+        with:
+          # Semantic release requires this as bare minimum
+          node-version: 20
+
+      # Why this? https://github.com/npm/cli/issues/7279
+      # Why this way? https://github.com/actions/setup-node/issues/213
+      - name: Install latest npm
+        shell: bash
+        run: |
+          npm install -g npm@latest &&
+          npm --version &&
+          npm list -g --depth 0
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Verify the integrity of provenance attestations and registry signatures for installed dependencies
+        run: npm audit signatures
+
+      - name: Build the SDK for release
+        run: npm run build
+
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          npm version ${{ github.event.inputs.version }} --no-git-tag-version
+          npm build
+          npm publish
+          git tag v${{ github.event.inputs.version }}
+          git push
+          git push --tags
