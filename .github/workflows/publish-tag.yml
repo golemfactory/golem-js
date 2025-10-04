@@ -7,12 +7,11 @@ on:
       version:
         description: "Build and publish to NPM"
         required: true
-        default: "0.17.4"
+        default: "3.9.0"
       tag:
         description: "Tag to apply to the release"
         required: true
         default: "test.1"
-
 
 # We're going to interact with GH from the pipelines, so we need to get some permissions
 permissions:
