@@ -41,10 +41,14 @@ jobs:
       - name: Verify the integrity of provenance attestations and registry signatures for installed dependencies
         run: npm audit signatures
 
-      - name: Set version, build and publish to NPM, tag the release and push the changes
+      - name: Login to npm registry
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          npm login
+          npm whoami
+
+      - name: Set version, build and publish to NPM, tag the release and push the changes
         run: |
           set -x
           npm version ${{ github.event.inputs.version }} --no-git-tag-version
