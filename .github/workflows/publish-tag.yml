@@ -4,7 +4,7 @@ on:
   # Allows triggering the workflow manually
   workflow_dispatch:
     inputs:
-      provider_version:
+      version:
         description: "Build and publish to NPM"
         required: false
         default: "v0.17.4-test.1"
