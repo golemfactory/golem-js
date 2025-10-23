@@ -1,4 +1,5 @@
 import { RequireAtLeastOne } from "../../shared/utils/types";
+import { ComparisonOperator } from "./demand-body-builder";
 
 /**
  * Specifies a set of options related to computation resources that will be used to form the demand
@@ -12,6 +13,18 @@ export type ResourceDemandOptions = {
   minCpuThreads: number;
   /** Minimum required CPU cores */
   minCpuCores: number;
+};
+
+/**
+ * User defined constraints for demand
+ */
+export type CustomConstraint = {
+  /** Name of the constraint */
+  name: string;
+  /** Value of the constraint */
+  value: string | number;
+  /** Type of comparison */
+  comparator: ComparisonOperator;
 };
 
 /**
@@ -38,6 +51,9 @@ export type RuntimeDemandOptions = {
 
   /** Required providers capabilities to run application: example: ["vpn"] */
   capabilities: string[];
+
+  /** Specify additional, custom constraints added to demand */
+  customConstraints: CustomConstraint[];
 };
 
 /**
