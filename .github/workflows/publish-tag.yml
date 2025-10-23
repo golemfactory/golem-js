@@ -9,7 +9,6 @@ on:
         required: false
         default: "v0.17.4-test.1"
 
-
 # We're going to interact with GH from the pipelines, so we need to get some permissions
 permissions:
   contents: read # for checkout
