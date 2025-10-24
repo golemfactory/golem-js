@@ -13,3 +13,4 @@ export { PaymentDemandDirector } from "./demand/directors/payment-demand-directo
 export { WorkloadDemandDirector } from "./demand/directors/workload-demand-director";
 export * from "./proposal/market-proposal-event";
 export * from "./scan";
+export { ComparisonOperator } from "./demand/demand-body-builder";
