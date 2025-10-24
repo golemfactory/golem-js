@@ -1,4 +1,4 @@
-import { WorkloadDemandDirectorConfigOptions } from "../options";
+import { CustomConstraint, WorkloadDemandDirectorConfigOptions } from "../options";
 import { GolemConfigError } from "../../../shared/error/golem-error";
 import { BaseConfig } from "./base-config";
 
@@ -35,10 +35,14 @@ export class WorkloadDemandDirectorConfig extends BaseConfig {
   readonly imageTag?: string;
   readonly imageUrl?: string;
 
+  readonly customConstraints: CustomConstraint[];
+
   constructor(options: Partial<WorkloadDemandDirectorConfigOptions> & RequiredWorkloadDemandConfigOptions) {
     super();
 
     Object.assign(this, options);
+
+    this.customConstraints = options.customConstraints ?? [];
 
     if (!options.runtime?.name) {
       this.runtime.name = this.engine;

@@ -36,6 +36,10 @@ export class WorkloadDemandDirector implements IDemandDirector {
     }
 
     this.addManifestDecorations(builder);
+
+    for (const constr of this.config.customConstraints) {
+      builder.addConstraint(constr.name, constr.value, constr.comparator);
+    }
   }
 
   private async resolveTaskPackageFromCustomUrl(): Promise<string> {
