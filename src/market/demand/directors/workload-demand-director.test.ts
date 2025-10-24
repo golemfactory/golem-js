@@ -1,4 +1,4 @@
-import { DemandBodyBuilder } from "../demand-body-builder";
+import { ComparisonOperator, DemandBodyBuilder } from "../demand-body-builder";
 import { WorkloadDemandDirector } from "./workload-demand-director";
 import { WorkloadDemandDirectorConfig } from "./workload-demand-director-config";
 
@@ -141,5 +141,27 @@ describe("ActivityDemandDirector", () => {
     const decorations = builder.getProduct();
 
     expect(decorations.constraints).toEqual(expect.arrayContaining(["(golem.runtime.name=vm-test)"]));
+  });
+
+  test("should add custom constraints", async () => {
+    const builder = new DemandBodyBuilder();
+
+    const director = new WorkloadDemandDirector(
+      new WorkloadDemandDirectorConfig({
+        expirationSec: 600,
+        imageHash: "529f7fdaf1cf46ce3126eb6bbcd3b213c314fe8fe884914f5d1106d4",
+        customConstraints: [
+          { name: "golem.custom.constraint1", value: "value1", comparator: ComparisonOperator.Eq },
+          { name: "golem.custom.constraint2", value: 10, comparator: ComparisonOperator.GtEq },
+        ],
+      }),
+    );
+    await director.apply(builder);
+
+    const decorations = builder.getProduct();
+
+    expect(decorations.constraints).toEqual(
+      expect.arrayContaining(["(golem.custom.constraint1=value1)", "(golem.custom.constraint2>=10)"]),
+    );
   });
 });
