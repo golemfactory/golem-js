@@ -6,7 +6,7 @@
 
 # Golem JavaScript API
 
-![GitHub](https://img.shields.io/github/license/golemfactory/golem-js)
+[![GitHub](https://img.shields.io/github/license/golemfactory/golem-js)](https://github.com/golemfactory/golem-js/blob/master/LICENSE)
 ![npm](https://img.shields.io/npm/v/@golem-sdk/golem-js)
 ![node-current](https://img.shields.io/node/v/@golem-sdk/golem-js)
 ![npm type definitions](https://img.shields.io/npm/types/@golem-sdk/golem-js)
