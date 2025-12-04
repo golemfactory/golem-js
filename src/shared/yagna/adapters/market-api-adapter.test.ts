@@ -46,7 +46,7 @@ describe("Market API Adapter", () => {
     properties: [
       {
         key: "golem.com.usage.vector",
-        value: ["golem.usage.duration_sec", "golem.usage.cpu_sec"],
+        value: ["golem.usage.duration_sec", "golem.usage.tera-hash"],
       },
       {
         key: "golem.com.pricing.model.linear.coeffs",
@@ -66,7 +66,7 @@ describe("Market API Adapter", () => {
   const expectedBody: DemandRequestBody = {
     constraints: "constraints",
     properties: {
-      "golem.com.usage.vector": ["golem.usage.duration_sec", "golem.usage.cpu_sec"],
+      "golem.com.usage.vector": ["golem.usage.duration_sec", "golem.usage.tera-hash"],
       "golem.com.pricing.model.linear.coeffs": [0.1, 0.1],
       "property-key-1": "property-value-1",
       "property-key-2": "property-value-2",
@@ -195,7 +195,7 @@ describe("Market API Adapter", () => {
       const mockProposalDTO = imock<YaTsClient.MarketApi.ProposalEventDTO["proposal"]>();
       when(mockProposalDTO.issuerId).thenReturn("issuer-id");
       when(mockProposalDTO.properties).thenReturn({
-        "golem.com.usage.vector": ["golem.usage.cpu_sec", "golem.usage.duration_sec"],
+        "golem.com.usage.vector": ["golem.usage.tera-hash", "golem.usage.duration_sec"],
         "golem.com.pricing.model.linear.coeffs": [0.0001, 0.00005, 0],
       });
       const mockProposalEvent: YaTsClient.MarketApi.ProposalEventDTO = {

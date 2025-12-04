@@ -38,7 +38,7 @@ describe("Offer Proposal", () => {
     test("throws an error when linear pricing vector is missing", () => {
       expect(() =>
         buildTestProposal({
-          "golem.com.usage.vector": ["golem.usage.cpu_sec", "golem.usage.duration_sec"],
+          "golem.com.usage.vector": ["golem.usage.tera-hash", "golem.usage.duration_sec"],
         }),
       ).toThrow(
         new GolemMarketError(
@@ -51,7 +51,7 @@ describe("Offer Proposal", () => {
     test("throws an error when linear pricing vector is empty", () => {
       expect(() =>
         buildTestProposal({
-          "golem.com.usage.vector": ["golem.usage.cpu_sec", "golem.usage.duration_sec"],
+          "golem.com.usage.vector": ["golem.usage.tera-hash", "golem.usage.duration_sec"],
           "golem.com.pricing.model.linear.coeffs": [],
         }),
       ).toThrow(
@@ -65,7 +65,7 @@ describe("Offer Proposal", () => {
     test("linear pricing vector has too few items", () => {
       expect(() =>
         buildTestProposal({
-          "golem.com.usage.vector": ["golem.usage.cpu_sec", "golem.usage.duration_sec"],
+          "golem.com.usage.vector": ["golem.usage.tera-hash", "golem.usage.duration_sec"],
           "golem.com.pricing.model.linear.coeffs": [1],
         }),
       ).toThrow(
@@ -106,7 +106,7 @@ describe("Offer Proposal", () => {
     test("usage vector is has too few items", () => {
       expect(() =>
         buildTestProposal({
-          "golem.com.usage.vector": ["golem.usage.cpu_sec"],
+          "golem.com.usage.vector": ["golem.usage.tera-hash"],
           "golem.com.pricing.model.linear.coeffs": [1, 2, 3],
         }),
       ).toThrow(
@@ -122,7 +122,7 @@ describe("Offer Proposal", () => {
     describe("positive cases", () => {
       test("it extracts the ENV and CPU prices based on the vector, and uses the last price value for START", () => {
         const proposal = buildTestProposal({
-          "golem.com.usage.vector": ["golem.usage.duration_sec", "golem.usage.cpu_sec"],
+          "golem.com.usage.vector": ["golem.usage.duration_sec", "golem.usage.tera-hash"],
           "golem.com.pricing.model.linear.coeffs": [0.01, 0.02, 0.03],
         });
 
@@ -133,7 +133,7 @@ describe("Offer Proposal", () => {
 
       test("flipping CPU and ENV in the vector still correctly matches to the prices on the pricing model", () => {
         const proposal = buildTestProposal({
-          "golem.com.usage.vector": ["golem.usage.cpu_sec", "golem.usage.duration_sec"],
+          "golem.com.usage.vector": ["golem.usage.tera-hash", "golem.usage.duration_sec"],
           "golem.com.pricing.model.linear.coeffs": [0.02, 0.01, 0.03],
         });
 
@@ -150,7 +150,7 @@ describe("Offer Proposal", () => {
 
       const proposal = buildTestProposal({
         "golem.inf.cpu.threads": 5,
-        "golem.com.usage.vector": ["golem.usage.duration_sec", "golem.usage.cpu_sec"],
+        "golem.com.usage.vector": ["golem.usage.duration_sec", "golem.usage.tera-hash"],
         "golem.com.pricing.model.linear.coeffs": [0.01, 0.02, START_PRICE],
       });
 
@@ -161,7 +161,7 @@ describe("Offer Proposal", () => {
     test("it estimate cost based on CPU, Env and startup costs if info about the number of threads is missing", () => {
       const START_PRICE = 0.3;
       const proposal = buildTestProposal({
-        "golem.com.usage.vector": ["golem.usage.duration_sec", "golem.usage.cpu_sec"],
+        "golem.com.usage.vector": ["golem.usage.duration_sec", "golem.usage.tera-hash"],
         "golem.com.pricing.model.linear.coeffs": [0.1, 0.2, START_PRICE],
       });
 
@@ -175,7 +175,7 @@ describe("Offer Proposal", () => {
 
       const proposal = buildTestProposal({
         "golem.inf.cpu.threads": THREADS_COUNT,
-        "golem.com.usage.vector": ["golem.usage.duration_sec", "golem.usage.cpu_sec"],
+        "golem.com.usage.vector": ["golem.usage.duration_sec", "golem.usage.tera-hash"],
         "golem.com.pricing.model.linear.coeffs": [0.01, 0.02, START_PRICE],
       });
 

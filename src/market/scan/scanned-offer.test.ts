@@ -36,7 +36,7 @@ describe("Scanned Offer", () => {
         "golem.com.payment.platform.erc20-polygon-glm.address": "0xPolygonAddress",
         "golem.com.payment.platform.erc20-hoodi-tglm.address": "0xHoodiAddress",
         "golem.com.payment.platform.nonsense": "0xNonsense",
-        "golem.com.usage.vector": ["golem.usage.cpu_sec", "golem.usage.duration_sec"],
+        "golem.com.usage.vector": ["golem.usage.tera-hash", "golem.usage.duration_sec"],
         "golem.com.pricing.model.linear.coeffs": [cpuPerSec, envPerSec, startPrice],
         "golem.inf.cpu.threads": numThreads,
         "some.other.prop": "with-a-value",

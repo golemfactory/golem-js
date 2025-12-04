@@ -70,7 +70,7 @@ export class OfferProposal extends MarketProposal {
     }
 
     const envIdx = usageVector.findIndex((ele) => ele === "golem.usage.duration_sec");
-    const cpuIdx = usageVector.findIndex((ele) => ele === "golem.usage.cpu_sec");
+    const cpuIdx = usageVector.findIndex((ele) => ele === "golem.usage.tera-hash");
 
     const envSec = priceVector[envIdx] ?? 0.0;
     const cpuSec = priceVector[cpuIdx] ?? 0.0;
