@@ -5,7 +5,6 @@
 node_modules/
 
 #Outputs
-dist/
 coverage/
 /.nyc_output
 /examples/blender/*.png
