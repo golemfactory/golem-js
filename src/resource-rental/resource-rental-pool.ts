@@ -229,22 +229,46 @@ export class ResourceRentalPool {
       createAbortSignalFromTimeout(signalOrTimeout),
       this.abortController.signal,
     );
-    return Promise.any([
-      this.createNewResourceRental(signal),
-      this.acquireQueue.get(signal).then((rental) => {
-        this.logger.info("A rental became available in the pool, using it instead of creating a new one");
-        return rental;
-      }),
-    ])
-      .catch((err: AggregateError) => {
-        // if all promises fail (i.e. the signal is aborted by the user) then
-        // rethrow the error produced by `createNewResourceRental` because it's more relevant
-        throw err.errors[0];
-      })
-      .finally(() => {
-        ac.abort();
-        cleanup();
-      });
+
+    type RaceResult = { source: "create" | "queue"; rental: ResourceRental };
+
+    const createPromise = this.createNewResourceRental(signal);
+    const queuePromise = this.acquireQueue.get(signal);
+
+    const wrappedCreate = createPromise.then((rental): RaceResult => ({ source: "create", rental }));
+    const wrappedQueue = queuePromise.then((rental): RaceResult => {
+      this.logger.info("A rental became available in the pool, using it instead of creating a new one");
+      return { source: "queue", rental };
+    });
+
+    try {
+      const winner = await Promise.any([wrappedCreate, wrappedQueue]);
+
+      if (winner.source === "queue") {
+        // The rental from the queue won, but it's possible that an agreement is
+        // currently being signed in the `createPromise`. If that completes, we should
+        // salvage the rental instead of letting it go to waste.
+        createPromise
+          .then((rental) => {
+            this.logger.info("Agreement was signed but not used, adding it back to the pool", {
+              agreementId: rental.agreement.id,
+            });
+            this.passResourceRentalToWaitingAcquireOrBackToPool(rental);
+          })
+          .catch(() => {
+            // Creation was aborted or failed, nothing to salvage
+          });
+      }
+
+      return winner.rental;
+    } catch (err) {
+      // If all promises fail (i.e. the signal is aborted by the user) then
+      // rethrow the error produced by `createNewResourceRental` because it's more relevant
+      throw (err as AggregateError).errors[0];
+    } finally {
+      ac.abort();
+      cleanup();
+    }
   }
 
   /**
