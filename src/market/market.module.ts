@@ -756,6 +756,13 @@ export class MarketModuleImpl implements MarketModule {
             reason: event.reason,
           });
           break;
+        case "AgreementTerminationNotice":
+          this.events.emit("agreementTerminationNoticeReceived", {
+            agreement: event.agreement,
+            terminationDeadline: event.terminationDeadline,
+            reason: event.reason,
+          });
+          break;
       }
     });
   }

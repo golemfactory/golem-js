@@ -397,6 +397,17 @@ export class MarketApiAdapter implements IMarketApi {
                         timestamp,
                       });
                       break;
+                    case "AgreementTerminationNoticeEvent":
+                      observer.next({
+                        type: "AgreementTerminationNotice",
+                        agreement,
+                        // @ts-expect-error FIXME #ya-ts-client event type discrimination doesn't work nicely with the current generator
+                        terminationDeadline: new Date(Date.parse(event.terminationDeadline)),
+                        // @ts-expect-error FIXME #ya-ts-client event type discrimination doesn't work nicely with the current generator
+                        reason: event.reason?.message ?? "",
+                        timestamp,
+                      });
+                      break;
                     default:
                       this.logger.warn("Unsupported agreement event type for event", { event });
                       break;
