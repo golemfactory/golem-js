@@ -35,6 +35,19 @@ export type MarketEvents = {
     terminatedBy: "Provider" | "Requestor";
   }) => void;
   agreementCancelled: (event: { agreement: Agreement }) => void;
+
+  /**
+   * Emitted when the Provider announces its intention to terminate the
+   * agreement (e.g. a graceful shutdown). The agreement stays approved and
+   * running activities may continue during the grace period - finish or
+   * migrate your work by `terminationDeadline`, after which the Provider
+   * may terminate the agreement.
+   */
+  agreementTerminationNoticeReceived: (event: {
+    agreement: Agreement;
+    terminationDeadline: Date;
+    reason: string;
+  }) => void;
 };
 
 export interface IMarketApi {
