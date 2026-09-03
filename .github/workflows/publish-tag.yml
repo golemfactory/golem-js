@@ -1,61 +1,57 @@
 name: Publish Test Version
 
+run-name: Publish ${{ inputs.version }} with npm tag ${{ inputs.tag }}
+
 on:
-  # Allows triggering the workflow manually
   workflow_dispatch:
     inputs:
       version:
-        description: "Build and publish to NPM"
+        description: "Exact package version to publish (must not exist on npm)"
         required: true
-        default: "3.9.0"
+        default: "3.10.0-oidc.1"
       tag:
-        description: "Tag to apply to the release"
+        description: "npm dist-tag to assign without changing latest"
         required: true
-        default: "test.1"
+        default: "oidc-test"
 
-# We're going to interact with GH from the pipelines, so we need to get some permissions
 permissions:
-  contents: read # for checkout
+  contents: read
 
 jobs:
   release:
-    name: Build and Publish ${{ github.event.inputs.version }}-${{ github.event.inputs.tag }}
+    name: Build and publish ${{ inputs.version }}
     runs-on: ubuntu-latest
     permissions:
-      contents: write # to be able to publish a GitHub release
-      issues: write # to be able to comment on released issues
-      pull-requests: write # to be able to comment on released pull requests
-      id-token: write # to enable use of OIDC for npm provenance
+      contents: read
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Setup NodeJS
         uses: actions/setup-node@v4
         with:
-          # Semantic release requires this as bare minimum
           node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - name: Install latest npm
+        run: |
+          npm install --global npm@latest
+          node --version
+          npm --version
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Setup npm auth
-        run: |
-          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+      - name: Set package version
         env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Set version to ${{ github.event.inputs.version }}-${{ github.event.inputs.tag }}
-        run: |
-          set -x
-          npm version ${{ github.event.inputs.version }}-${{ github.event.inputs.tag }} --no-git-tag-version
+          PACKAGE_VERSION: ${{ inputs.version }}
+        run: npm version "$PACKAGE_VERSION" --no-git-tag-version
 
       - name: Build the SDK for release
-        run: |
-          npm run build
+        run: npm run build
 
-      - name: Publish to NPM - ${{ github.event.inputs.version }}-${{ github.event.inputs.tag }}
-        run: |
-          npm publish --tag ${{ github.event.inputs.tag }}
+      - name: Publish to npm with OIDC
+        env:
+          NPM_DIST_TAG: ${{ inputs.tag }}
+        run: npm publish --access public --tag "$NPM_DIST_TAG"
