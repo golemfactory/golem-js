@@ -162,8 +162,9 @@ jobs:
       - name: Setup NodeJS
         uses: actions/setup-node@v4
         with:
-          # Semantic release requires this as bare minimum
-          node-version: 20
+          # Must stay >=22: the `npm install -g npm@latest` step below pulls
+          # npm@12, which refuses to install on node 20.
+          node-version: 22
 
       # Why this? https://github.com/npm/cli/issues/7279
       # Why this way? https://github.com/actions/setup-node/issues/213
