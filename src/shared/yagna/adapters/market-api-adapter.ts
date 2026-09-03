@@ -1,4 +1,4 @@
-import { Observable, switchMap } from "rxjs";
+import { concatMap, Observable } from "rxjs";
 import {
   Agreement,
   AgreementEvent,
@@ -349,7 +349,7 @@ export class MarketApiAdapter implements IMarketApi {
 
   public collectAgreementEvents(): Observable<AgreementEvent> {
     return this.yagnaApi.agreementEvents$.pipe(
-      switchMap(
+      concatMap(
         (event) =>
           new Observable<AgreementEvent>((observer) => {
             try {
@@ -413,7 +413,8 @@ export class MarketApiAdapter implements IMarketApi {
                       break;
                   }
                 })
-                .catch((err) => this.logger.error("Failed to load agreement", { agreementId: event.agreementId, err }));
+                .catch((err) => this.logger.error("Failed to load agreement", { agreementId: event.agreementId, err }))
+                .finally(() => observer.complete());
             } catch (err) {
               const golemMarketError = new GolemMarketError(
                 "Error while processing agreement event from yagna",

@@ -2,8 +2,8 @@ import { _, deepEqual, imock, instance, mock, reset, verify, when } from "@johan
 import * as YaTsClient from "ya-ts-client";
 import { YagnaAgreementOperationEvent, YagnaApi } from "../yagnaApi";
 import { DemandRequestBody, MarketApiAdapter } from "./market-api-adapter";
-import { Demand, DemandSpecification, OfferProposal } from "../../../market";
-import { Subject, take } from "rxjs";
+import { Agreement, AgreementEvent, Demand, DemandSpecification, OfferProposal } from "../../../market";
+import { firstValueFrom, Subject, take, toArray } from "rxjs";
 import { Logger } from "../../utils";
 import { DemandBodyPrototype, IDemandRepository } from "../../../market/demand";
 import { IAgreementRepository } from "../../../market/agreement/agreement";
@@ -27,6 +27,7 @@ jest.useFakeTimers();
 beforeEach(() => {
   reset(mockYagna);
   reset(mockMarket);
+  reset(mockAgreementRepo);
 
   when(mockYagna.market).thenReturn(instance(mockMarket));
   when(mockYagna.agreementEvents$).thenReturn(agreementEvents$);
@@ -227,6 +228,52 @@ describe("Market API Adapter", () => {
           }
         },
       });
+    });
+  });
+
+  describe("collectAgreementEvents()", () => {
+    it("maps every termination notice when multiple events arrive before agreement lookups resolve", async () => {
+      const firstAgreement = { id: "agreement-1" } as Agreement;
+      const secondAgreement = { id: "agreement-2" } as Agreement;
+      const eventDate = "2026-09-03T10:00:00Z";
+      const firstDeadline = "2026-09-03T11:00:00Z";
+      const secondDeadline = "2026-09-03T12:00:00Z";
+
+      when(mockAgreementRepo.getById("agreement-1", undefined)).thenResolve(firstAgreement);
+      when(mockAgreementRepo.getById("agreement-2", undefined)).thenResolve(secondAgreement);
+
+      const eventsPromise = firstValueFrom(api.collectAgreementEvents().pipe(take(2), toArray()));
+
+      agreementEvents$.next({
+        eventType: "AgreementTerminationNoticeEvent",
+        eventDate,
+        agreementId: "agreement-1",
+        terminationDeadline: firstDeadline,
+        reason: { message: "First provider shutdown" },
+      } as YagnaAgreementOperationEvent);
+      agreementEvents$.next({
+        eventType: "AgreementTerminationNoticeEvent",
+        eventDate,
+        agreementId: "agreement-2",
+        terminationDeadline: secondDeadline,
+      } as YagnaAgreementOperationEvent);
+
+      await expect(eventsPromise).resolves.toEqual<AgreementEvent[]>([
+        {
+          type: "AgreementTerminationNotice",
+          agreement: firstAgreement,
+          terminationDeadline: new Date(firstDeadline),
+          reason: "First provider shutdown",
+          timestamp: new Date(eventDate),
+        },
+        {
+          type: "AgreementTerminationNotice",
+          agreement: secondAgreement,
+          terminationDeadline: new Date(secondDeadline),
+          reason: "",
+          timestamp: new Date(eventDate),
+        },
+      ]);
     });
   });
 });

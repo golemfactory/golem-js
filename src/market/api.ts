@@ -39,9 +39,9 @@ export type MarketEvents = {
   /**
    * Emitted when the Provider announces its intention to terminate the
    * agreement (e.g. a graceful shutdown). The agreement stays approved and
-   * running activities may continue during the grace period - finish or
-   * migrate your work by `terminationDeadline`, after which the Provider
-   * may terminate the agreement.
+   * existing activities may continue, but the Requestor should finish or
+   * migrate its work by `terminationDeadline`. The deadline is advisory and
+   * does not prevent either party from terminating the agreement earlier.
    */
   agreementTerminationNoticeReceived: (event: {
     agreement: Agreement;

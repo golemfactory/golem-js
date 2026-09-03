@@ -29,9 +29,10 @@ export type AgreementCancelledEvent = {
 
 /**
  * The Provider announced its intention to terminate the agreement. The
- * agreement stays approved and running activities may continue during the
- * grace period, but finish or migrate your work by `terminationDeadline` -
- * after that the Provider may terminate the agreement.
+ * agreement stays approved and existing activities may continue, but the
+ * Requestor should finish or migrate its work by `terminationDeadline`.
+ * The deadline is advisory and does not prevent either party from terminating
+ * the agreement earlier.
  */
 export type AgreementTerminationNoticeEvent = {
   type: "AgreementTerminationNotice";
