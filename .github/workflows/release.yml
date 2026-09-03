@@ -14,6 +14,22 @@ on:
   # Allows triggering the workflow manually
   workflow_dispatch:
     inputs:
+      mode:
+        description: "Select whether to run semantic-release or publish a test version"
+        required: true
+        type: choice
+        options:
+          - release
+          - test-publish
+        default: release
+      test_version:
+        description: "Exact test package version (must not exist on npm)"
+        required: false
+        default: "3.10.0-oidc.2"
+      npm_tag:
+        description: "npm dist-tag for a test publish (does not change latest)"
+        required: false
+        default: "oidc-test"
       payment_network:
         description: "Payment network (hoodi, amoy, polygon)"
         required: false
@@ -59,7 +75,7 @@ env:
 jobs:
   run-e2e-tests:
     name: Run E2E tests
-    if: ${{ (github.event.inputs.skip_tests || 'true') != 'true' }}
+    if: ${{ (github.event.inputs.mode || 'release') == 'release' && (github.event.inputs.skip_tests || 'true') != 'true' }}
     runs-on: goth2
     steps:
       - uses: actions/checkout@v4
@@ -85,7 +101,7 @@ jobs:
 
   run-examples-tests:
     name: Run Examples tests
-    if: ${{ (github.event.inputs.skip_tests || 'true') != 'true' }}
+    if: ${{ (github.event.inputs.mode || 'release') == 'release' && (github.event.inputs.skip_tests || 'true') != 'true' }}
     runs-on: goth2
     steps:
       - uses: actions/checkout@v4
@@ -104,7 +120,7 @@ jobs:
 
   run-cypress-tests:
     name: Run Cypress tests
-    if: ${{ (github.event.inputs.skip_tests || 'true') != 'true' }}
+    if: ${{ (github.event.inputs.mode || 'release') == 'release' && (github.event.inputs.skip_tests || 'true') != 'true' }}
     runs-on: goth2
     steps:
       - uses: actions/checkout@v4
@@ -141,7 +157,7 @@ jobs:
     # defaults below (and on the three test jobs) to `|| 'false'` -- the suites
     # then run again and gate the publish exactly as before.
     if: >-
-      ${{ always() && (
+      ${{ (github.event.inputs.mode || 'release') == 'release' && always() && (
         (github.event.inputs.skip_tests || 'true') == 'true'
         || (needs.run-e2e-tests.result == 'success'
             && needs.run-examples-tests.result == 'success'
@@ -162,21 +178,11 @@ jobs:
       - name: Setup NodeJS
         uses: actions/setup-node@v4
         with:
-          # Must stay >=22: the `npm install -g npm@latest` step below pulls
-          # npm@12, which refuses to install on node 20.
-          node-version: 22
-
-      # Why this? https://github.com/npm/cli/issues/7279
-      # Why this way? https://github.com/actions/setup-node/issues/213
-      - name: Install latest npm
-        shell: bash
-        run: |
-          npm install -g npm@latest &&
-          npm --version &&
-          npm list -g --depth 0
+          node-version: 24
+          registry-url: https://registry.npmjs.org
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Verify the integrity of provenance attestations and registry signatures for installed dependencies
         run: npm audit signatures
@@ -187,6 +193,45 @@ jobs:
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npx semantic-release
-run-name: "${{ github.workflow }} - Network: ${{ github.event.inputs.payment_network }}, Requestor: ${{ github.event.inputs.requestor_version }}, Provider: ${{ github.event.inputs.provider_version }}, WASI: ${{ github.event.inputs.provider_wasi_version }}, VM: ${{ github.event.inputs.provider_vm_version }}"
+
+  test-publish:
+    name: Publish test version ${{ github.event.inputs.test_version }}
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.mode == 'test-publish' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - name: Install latest npm
+        run: |
+          npm install --global npm@latest
+          node --version
+          npm --version
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Set package version
+        env:
+          PACKAGE_VERSION: ${{ github.event.inputs.test_version }}
+        run: npm version "$PACKAGE_VERSION" --no-git-tag-version
+
+      - name: Build the SDK for release
+        run: npm run build
+
+      - name: Publish to npm with OIDC
+        env:
+          NPM_DIST_TAG: ${{ github.event.inputs.npm_tag }}
+        run: npm publish --access public --tag "$NPM_DIST_TAG"
+
+run-name: "${{ github.workflow }} - ${{ github.event.inputs.mode || 'release' }} - ${{ github.event.inputs.test_version || github.ref_name }}"
