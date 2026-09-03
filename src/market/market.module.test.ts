@@ -655,6 +655,30 @@ describe("Market module", () => {
         // Then
         expect(listener).toHaveBeenCalled();
       });
+
+      test("Emits 'agreementTerminationNoticeReceived'", () => {
+        // Given
+        const agreement = instance(mockAgreement);
+        const terminationDeadline = new Date("2026-09-03T11:00:00Z");
+        const listener = jest.fn();
+        marketModule.events.on("agreementTerminationNoticeReceived", listener);
+
+        // When
+        testAgreementEvent$.next({
+          type: "AgreementTerminationNotice",
+          agreement,
+          terminationDeadline,
+          reason: "Provider shutdown",
+          timestamp: new Date(),
+        });
+
+        // Then
+        expect(listener).toHaveBeenCalledWith({
+          agreement,
+          terminationDeadline,
+          reason: "Provider shutdown",
+        });
+      });
     });
   });
   describe("estimateBudget()", () => {

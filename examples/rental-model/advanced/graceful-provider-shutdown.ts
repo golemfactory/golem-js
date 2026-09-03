@@ -4,12 +4,12 @@
  * a graceful shutdown (`golemsp stop --graceful` on the provider).
  *
  * The provider sends an `AgreementTerminationNoticeEvent` through the
- * market: the agreement stays approved and whatever is already running may
- * keep running, but the provider expects you to finish or migrate your work
- * by `terminationDeadline` and may terminate the agreement after that.
- * A cooperative requestor finishes the work it has in flight, schedules no
- * new work on that rental, and terminates the agreement - which also lets
- * the provider finish shutting down sooner.
+ * market: the agreement stays approved and existing activities may continue,
+ * but the provider expects you to finish or migrate your work by
+ * `terminationDeadline`. The deadline is advisory and does not prevent an
+ * earlier termination. A cooperative requestor stops scheduling new work,
+ * finishes in-flight work when possible, and terminates the agreement - which
+ * also lets the provider finish shutting down sooner.
  */
 import { MarketOrderSpec, GolemNetwork } from "@golem-sdk/golem-js";
 import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
@@ -44,7 +44,7 @@ const order: MarketOrderSpec = {
 
     glm.market.events.on("agreementTerminationNoticeReceived", (event) => {
       console.log(
-        "Provider '%s' will terminate agreement '%s' at %s (reason: '%s') - finishing up",
+        "Provider '%s' announced termination of agreement '%s' with deadline %s (reason: '%s') - finishing up",
         event.agreement.provider.name,
         event.agreement.id,
         event.terminationDeadline.toISOString(),
